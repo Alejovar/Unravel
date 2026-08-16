@@ -1,0 +1,36 @@
+# --- Web framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# --- Database ---
+sqlalchemy==2.0.35
+alembic==1.13.3
+psycopg[binary]==3.2.2
+
+# --- Queue / workers ---
+redis==5.0.8
+rq==1.16.2
+
+# --- HTTP / scraping ---
+httpx[http2]==0.27.2
+trafilatura==1.12.2
+beautifulsoup4==4.12.3
+lxml==5.3.0
+feedparser==6.0.11
+playwright==1.47.0
+
+# --- Similarity (no-LLM engine) ---
+scikit-learn==1.5.2
+rank-bm25==0.2.2
+numpy==1.26.4
+spacy==3.7.6
+python-dateutil==2.9.0.post0
+
+# --- LLM (OpenRouter only) ---
+tenacity==9.0.0
+
+# --- Misc ---
+orjson==3.10.7
+python-slugify==8.0.4

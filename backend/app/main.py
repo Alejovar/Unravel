@@ -1,0 +1,32 @@
+import logging
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.routes.analyses import router as analyses_router
+from app.config import get_settings
+
+logging.basicConfig(level=logging.INFO)
+
+settings = get_settings()
+
+app = FastAPI(
+    title="Unravel API",
+    description="News Traceability Graph — motor de rastreo y análisis.",
+    version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(analyses_router)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "llm_configured": settings.llm_configured}

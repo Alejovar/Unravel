@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --unravel-teal: #1f6f6e;
+  --unravel-cream: #f7f3ee;
+}
+
+html,
+body {
+  background-color: #faf8f4;
+  color: #201b17;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #d9d2c4;
+  border-radius: 999px;
+}
