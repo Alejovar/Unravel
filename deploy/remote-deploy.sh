@@ -15,9 +15,15 @@ case "$DEPLOY_PATH" in
   /*) ;;
   *) DEPLOY_PATH="/$DEPLOY_PATH" ;;
 esac
-mkdir -p "$(dirname "$DEPLOY_PATH")"
-
 echo "== Deploy $(date) — destino: $DEPLOY_PATH =="
+
+# /opt (o el padre que sea) suele ser de root — se crea el directorio de
+# destino con sudo y se lo cede al usuario que corre el deploy, así el
+# resto del script (clone/pull/docker) no necesita privilegios.
+if [ ! -d "$DEPLOY_PATH" ]; then
+  sudo mkdir -p "$DEPLOY_PATH"
+  sudo chown "$(id -u):$(id -g)" "$DEPLOY_PATH"
+fi
 
 # --- Clonar o actualizar el repo ---
 if [ -d "$DEPLOY_PATH/.git" ]; then
