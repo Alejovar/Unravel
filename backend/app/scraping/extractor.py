@@ -19,6 +19,19 @@ from dateutil import parser as dateparser
 
 logger = logging.getLogger(__name__)
 
+# Títulos típicos de páginas de bloqueo/verificación (WAF, Cloudflare, paywall)
+# que a veces responden con status 200 pero no son el artículo real.
+BLOCK_PAGE_TITLES = (
+    "access denied",
+    "attention required",
+    "just a moment",
+    "are you a human",
+    "you have been blocked",
+    "request unsuccessful",
+    "403 forbidden",
+    "429 too many requests",
+)
+
 
 @dataclass
 class ExtractedArticle:
@@ -142,6 +155,10 @@ def extract(html: str, url: str) -> ExtractedArticle | None:
     links = _extract_links(html, url)
 
     if not text or len(text) < 60:
+        return None
+
+    if title.strip().lower() in BLOCK_PAGE_TITLES:
+        logger.warning("Descartando %s: título de página de bloqueo (%r)", url, title)
         return None
 
     return ExtractedArticle(

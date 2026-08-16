@@ -56,7 +56,11 @@ def build_graph_response(analysis: Analysis) -> GraphResponse:
         origin_article = next((a for a in articles if a.is_origin), None)
         origin_desc = ""
         if origin_article:
-            when = origin_article.published_at.strftime("%H:%M") if origin_article.published_at else ""
+            pub = origin_article.published_at
+            # Muchas fuentes solo dan la fecha; el parser completa la hora
+            # faltante con medianoche UTC, que no es una hora real.
+            has_time = pub and not (pub.hour == 0 and pub.minute == 0 and pub.second == 0)
+            when = pub.strftime("%H:%M") if has_time else ""
             origin_desc = (
                 f"{origin_article.source_handle or origin_article.domain} · {when} · "
                 f"{origin_article.status.value.capitalize()}"

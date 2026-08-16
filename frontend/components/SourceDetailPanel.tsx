@@ -1,5 +1,6 @@
 import { GraphNode } from "@/lib/types";
 import { STATUS_LABEL } from "@/lib/visualStyle";
+import { hasKnownTime } from "@/lib/time";
 import { CloseIcon, ExternalLinkIcon, EyeIcon, ShareIcon, GlobeIcon, OriginIcon } from "@/components/icons";
 
 const BADGE_STYLE: Record<string, { bg: string; fg: string }> = {
@@ -14,7 +15,7 @@ function formatDate(iso: string | null): { date: string; time: string } {
   const d = new Date(iso);
   return {
     date: d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
-    time: d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false }),
+    time: hasKnownTime(iso) ? d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false }) : "—",
   };
 }
 
@@ -94,20 +95,26 @@ export function SourceDetailPanel({ node, onClose }: { node: GraphNode; onClose:
         )}
       </div>
 
+      {(node.reads !== null || node.shares !== null) && (
       <div className="mb-5 grid grid-cols-2 gap-3">
+        {node.reads !== null && (
         <div className="rounded-xl bg-unravel-cream p-3">
           <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest2 text-unravel-inkSoft/70">
             <EyeIcon className="h-3 w-3" /> Reads
           </p>
           <p className="mt-0.5 text-sm font-semibold text-unravel-ink">{formatCount(node.reads)}</p>
         </div>
+        )}
+        {node.shares !== null && (
         <div className="rounded-xl bg-unravel-cream p-3">
           <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest2 text-unravel-inkSoft/70">
             <ShareIcon className="h-3 w-3" /> Shares
           </p>
           <p className="mt-0.5 text-sm font-semibold text-unravel-ink">{formatCount(node.shares)}</p>
         </div>
+        )}
       </div>
+      )}
 
       <div className="mb-4">
         <p className="mb-1 text-[10px] font-bold uppercase tracking-widest2 text-unravel-inkSoft/70">Headline</p>

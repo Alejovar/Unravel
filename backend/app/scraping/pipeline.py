@@ -59,6 +59,12 @@ async def scrape_article(url: str) -> ExtractedArticle | None:
         rendered = await playwright_fallback.render(url)
         if rendered:
             html = rendered
+        elif result.status_code >= 400:
+            # Sin fallback exitoso y la respuesta original fue un error HTTP
+            # (bot-block, paywall, WAF, etc.) — no hay contenido real que
+            # extraer, así que descartamos en vez de parsear la página de error.
+            logger.warning("Descartando %s: status %s sin fallback exitoso", url, result.status_code)
+            return None
 
     if not html:
         return None

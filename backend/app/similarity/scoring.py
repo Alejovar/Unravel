@@ -27,7 +27,7 @@ WEIGHTS = {
     "temporal_score": 0.10,
 }
 
-RELATED_THRESHOLD = 0.42
+RELATED_THRESHOLD = 0.32
 
 
 class ArticleLike(Protocol):

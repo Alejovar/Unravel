@@ -42,7 +42,10 @@ def build_evidence(
 
 
 def rule_based_summary(
-    articles: list[Article], relations: list[ArticleRelation], divergence_count: int
+    articles: list[Article],
+    relations: list[ArticleRelation],
+    divergence_count: int,
+    llm_configured: bool = False,
 ) -> str:
     """Resumen extractivo simple, sin LLM, usado cuando no hay API key
     configurada (VeriGraph.md: el resumen debe poder generarse igual, solo
@@ -52,7 +55,11 @@ def rule_based_summary(
 
     ordered = sorted(articles, key=lambda a: a.published_at or a.created_at)
     origin = next((a for a in ordered if a.is_origin), ordered[0])
-    origin_time = origin.published_at.strftime("%H:%M") if origin.published_at else "hora desconocida"
+    pub = origin.published_at
+    # Muchas fuentes solo dan la fecha; el parser completa la hora faltante
+    # con medianoche UTC, que no es una hora real.
+    has_time = pub and not (pub.hour == 0 and pub.minute == 0 and pub.second == 0)
+    origin_time = pub.strftime("%H:%M") if has_time else "hora desconocida"
 
     parts = [
         f"Se encontraron {len(articles)} publicaciones relacionadas con esta historia.",
@@ -73,8 +80,14 @@ def rule_based_summary(
     else:
         parts.append("No se identificaron contradicciones claras entre las fuentes analizadas.")
 
-    parts.append(
-        "Configura tu OPENROUTER_API_KEY en el archivo .env para obtener un resumen semántico "
-        "más detallado generado por el modelo de lenguaje."
-    )
+    if llm_configured:
+        parts.append(
+            "No se pudo generar el resumen semántico con el modelo de lenguaje en este intento "
+            "(el servicio no respondió); este es un resumen básico generado sin LLM."
+        )
+    else:
+        parts.append(
+            "Configura tu OPENROUTER_API_KEY en el archivo .env para obtener un resumen semántico "
+            "más detallado generado por el modelo de lenguaje."
+        )
     return " ".join(parts)

@@ -29,3 +29,17 @@ export const STATUS_LABEL: Record<string, string> = {
   developing: "Developing",
   corrected: "Corrected",
 };
+
+export const ICON_CHAR: Record<string, string> = {
+  check: "✓",
+  question: "?",
+  cross: "✕",
+};
+
+export const NODE_LABEL: Record<NodeType, string> = {
+  origin: "Origin",
+  unverified: "Unverified",
+  confirmed: "Confirmed",
+  developing: "Developing",
+  corrected: "Corrected",
+};

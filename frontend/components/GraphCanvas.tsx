@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Core, ElementDefinition } from "cytoscape";
 import { GraphEdge, GraphNode } from "@/lib/types";
-import { NODE_STYLE, RELATION_STYLE } from "@/lib/visualStyle";
+import { NODE_STYLE, RELATION_STYLE, ICON_CHAR } from "@/lib/visualStyle";
+import { hasKnownTime } from "@/lib/time";
 import { ChevronRightIcon } from "@/components/icons";
 
 interface GraphCanvasProps {
@@ -26,10 +27,36 @@ interface LaidOutNode {
 let dagreRegistered = false;
 
 function formatTime(publishedAt: string | null): string {
-  if (!publishedAt) return "";
+  if (!publishedAt || !hasKnownTime(publishedAt)) return "";
   const date = new Date(publishedAt);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+/**
+ * Con umbrales de similitud laxos, un análisis puede traer decenas de
+ * relaciones candidatas por artículo (todas las fuentes hablando del mismo
+ * evento se parecen entre sí). Dibujar todas vuelve el grafo ilegible y
+ * oculta la trayectoria real de la noticia. Para la vista, nos quedamos
+ * solo con la relación más fuerte que conecta a cada artículo con su
+ * "padre" más probable — preferimos evidencia observada (hyperlink real)
+ * sobre inferida, y a igualdad de tipo, mayor confianza — así el grafo
+ * queda como un árbol legible en vez de una maraña casi completa.
+ */
+function pruneToStrongestParent(edges: GraphEdge[]): GraphEdge[] {
+  const bestByTarget = new Map<string, GraphEdge>();
+  for (const e of edges) {
+    const current = bestByTarget.get(e.target);
+    if (!current) {
+      bestByTarget.set(e.target, e);
+      continue;
+    }
+    const score = (edge: GraphEdge) => (edge.kind === "observed" ? 1 : 0) * 10 + edge.confidence;
+    if (score(e) > score(current)) {
+      bestByTarget.set(e.target, e);
+    }
+  }
+  return Array.from(bestByTarget.values());
 }
 
 export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasProps) {
@@ -40,6 +67,17 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
     width: 960,
     height: 320,
   });
+
+  const displayEdges = useMemo(() => pruneToStrongestParent(edges), [edges]);
+  // Nodo "más reciente" visualmente: el que no tiene nada apuntando hacia
+  // afuera en el árbol mostrado (no en las 200+ relaciones crudas), y que
+  // además está conectado a algo — un nodo totalmente aislado no es parte
+  // de la trayectoria trazada, así que no cuenta como "latest".
+  const parentOf = useMemo(() => new Set(displayEdges.map((e) => e.source)), [displayEdges]);
+  const connected = useMemo(
+    () => new Set(displayEdges.flatMap((e) => [e.source, e.target])),
+    [displayEdges]
+  );
 
   useEffect(() => {
     if (!cyContainerRef.current || nodes.length === 0) {
@@ -61,7 +99,7 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
         ...nodes.map((n) => ({
           data: { id: n.id, type: n.type, icon: NODE_STYLE[n.type].icon },
         })),
-        ...edges.map((e) => ({
+        ...displayEdges.map((e) => ({
           data: {
             id: e.id,
             source: e.source,
@@ -93,10 +131,7 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
               "border-width": 3,
               "border-color": (ele: any) => NODE_STYLE[ele.data("type") as GraphNode["type"]].border,
               "border-style": (ele: any) => NODE_STYLE[ele.data("type") as GraphNode["type"]].borderStyle,
-              label: (ele: any) => {
-                const icon = ele.data("icon");
-                return icon === "check" ? "✓" : icon === "question" ? "?" : icon === "cross" ? "✕" : "";
-              },
+              label: (ele: any) => ICON_CHAR[ele.data("icon")] ?? "",
               color: (ele: any) => NODE_STYLE[ele.data("type") as GraphNode["type"]].iconColor,
               "font-size": 20,
               "font-weight": 700,
@@ -139,16 +174,7 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
             },
           },
         ],
-        layout: {
-          name: "dagre",
-          rankDir: "LR",
-          nodeSep: 70,
-          rankSep: 110,
-          edgeSep: 20,
-          ranker: "network-simplex",
-          padding: CANVAS_PADDING,
-          fit: false,
-        } as any,
+        layout: { name: "preset" },
         wheelSensitivity: 0.2,
         minZoom: 1,
         maxZoom: 1,
@@ -160,7 +186,24 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
         if (node) onSelect(node);
       });
 
-      cy.one("layoutstop", () => {
+      // Se corre el layout explícitamente (en vez de pasarlo en las opciones
+      // del constructor) para poder engancharse a "layoutstop" ANTES de que
+      // arranque: dagre corre síncronamente, así que si el listener se
+      // registra después de crear la instancia, el evento ya se disparó y
+      // nunca se recibe — el estado de React (tamaño real del grafo, labels)
+      // se queda pegado en el valor inicial.
+      const dagreLayout = cy.layout({
+        name: "dagre",
+        rankDir: "LR",
+        nodeSep: 70,
+        rankSep: 110,
+        edgeSep: 20,
+        ranker: "network-simplex",
+        padding: CANVAS_PADDING,
+        fit: false,
+      } as any);
+
+      dagreLayout.one("layoutstop", () => {
         if (cancelled) return;
         const bb = cy.elements().boundingBox();
         const offsetX = CANVAS_PADDING - bb.x1;
@@ -184,6 +227,8 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
         });
       });
 
+      dagreLayout.run();
+
       cyRef.current = cy;
     })();
 
@@ -191,7 +236,7 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges]);
+  }, [nodes, displayEdges]);
 
   useEffect(() => {
     if (!cyRef.current) return;
@@ -200,6 +245,16 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
       cyRef.current.getElementById(selectedId).select();
     }
   }, [selectedId]);
+
+  useEffect(() => {
+    if (!cyRef.current) return;
+    // El contenedor cambia de tamaño recién después de que el layout de
+    // dagre calcula las posiciones finales (ver setCanvas en layoutstop);
+    // Cytoscape no detecta ese resize del DOM por su cuenta.
+    cyRef.current.resize();
+    cyRef.current.pan({ x: 0, y: 0 });
+    cyRef.current.zoom(1);
+  }, [canvas.width, canvas.height]);
 
   useEffect(() => {
     return () => {
@@ -231,7 +286,7 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
             >
               <span className="truncate text-xs font-bold text-unravel-ink">{n.label}</span>
               {n.source && <span className="truncate text-[10px] text-unravel-inkSoft">{n.source}</span>}
-              {n.is_latest && (
+              {!n.is_origin && connected.has(n.id) && !parentOf.has(n.id) && (
                 <span className="mt-1 flex items-center gap-0.5 rounded-full bg-unravel-mint px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-unravel-teal">
                   <ChevronRightIcon className="h-2.5 w-2.5" />
                   Latest

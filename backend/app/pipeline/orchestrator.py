@@ -213,7 +213,7 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
     llm_available = settings.llm_configured
     claims_by_article: dict[str, list[Claim]] = {a.id: [] for a in db_articles}
 
-    llm_concurrency = asyncio.Semaphore(4)
+    llm_concurrency = asyncio.Semaphore(2)
 
     async def _extract_for(article: Article) -> tuple[str, list]:
         async with llm_concurrency:
@@ -344,9 +344,9 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
             summary_text = await llm.summarize(evidence)
         except Exception as exc:  # noqa: BLE001
             logger.warning("LLM summarize failed, using rule-based summary: %s", exc)
-            summary_text = rule_based_summary(db_articles, relations, divergence_count)
+            summary_text = rule_based_summary(db_articles, relations, divergence_count, llm_configured=True)
     else:
-        summary_text = rule_based_summary(db_articles, relations, divergence_count)
+        summary_text = rule_based_summary(db_articles, relations, divergence_count, llm_configured=False)
 
     ordered = sorted(db_articles, key=lambda a: a.published_at or a.created_at)
     latest = ordered[-1] if ordered else origin

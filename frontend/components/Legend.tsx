@@ -1,52 +1,44 @@
-const NODE_LEGEND = [
-  { label: "Origin", border: "#9C948A", dashed: false, icon: "" },
-  { label: "Confirmed", border: "#1F6F6E", dashed: false, icon: "✓" },
-  { label: "Developing", border: "#C9822E", dashed: true, icon: "?" },
-  { label: "Corrected", border: "#B93A3A", dashed: false, icon: "✕" },
-];
-
-const EDGE_LEGEND = [
-  { label: "confirmation", color: "#1F6F6E", dashed: false },
-  { label: "developing", color: "#C9822E", dashed: true },
-  { label: "correction", color: "#B93A3A", dashed: true },
-];
+import { NODE_STYLE, RELATION_STYLE, NODE_LABEL, ICON_CHAR } from "@/lib/visualStyle";
 
 export function Legend() {
+  const nodeEntries = Object.entries(NODE_STYLE) as [keyof typeof NODE_STYLE, (typeof NODE_STYLE)[keyof typeof NODE_STYLE]][];
+  const edgeEntries = Object.entries(RELATION_STYLE) as [keyof typeof RELATION_STYLE, (typeof RELATION_STYLE)[keyof typeof RELATION_STYLE]][];
+
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-unravel-border pt-4 text-xs text-unravel-inkSoft">
       <span className="font-semibold uppercase tracking-widest2 text-unravel-inkSoft/70">Legend</span>
 
-      {NODE_LEGEND.map((item) => (
-        <span key={item.label} className="flex items-center gap-1.5">
+      {nodeEntries.map(([type, style]) => (
+        <span key={type} className="flex items-center gap-1.5">
           <span
             className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-[9px] font-bold"
             style={{
-              border: `2px ${item.dashed ? "dashed" : "solid"} ${item.border}`,
-              color: item.border,
+              border: `2px ${style.borderStyle} ${style.border}`,
+              color: style.iconColor,
             }}
           >
-            {item.icon}
+            {ICON_CHAR[style.icon] ?? ""}
           </span>
-          {item.label}
+          {NODE_LABEL[type]}
         </span>
       ))}
 
       <span className="mx-1 h-4 w-px bg-unravel-border" />
 
-      {EDGE_LEGEND.map((item) => (
-        <span key={item.label} className="flex items-center gap-1.5">
+      {edgeEntries.map(([relation, style]) => (
+        <span key={relation} className="flex items-center gap-1.5">
           <svg width="20" height="8" className="shrink-0">
             <line
               x1="0"
               y1="4"
               x2="20"
               y2="4"
-              stroke={item.color}
+              stroke={style.color}
               strokeWidth="2"
-              strokeDasharray={item.dashed ? "4 3" : undefined}
+              strokeDasharray={style.dashed ? "4 3" : undefined}
             />
           </svg>
-          {item.label}
+          {style.label}
         </span>
       ))}
     </div>
