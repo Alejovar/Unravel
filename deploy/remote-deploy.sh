@@ -8,7 +8,16 @@ set -euo pipefail
 : "${DEPLOY_PATH:=/opt/unravel}"
 : "${GIT_BRANCH:=main}"
 
-echo "== Deploy $(date) =="
+# Normaliza a ruta absoluta por si DEPLOY_PATH llegó sin la barra inicial
+# (ej. "opt/unravel" en vez de "/opt/unravel") — si no, cd más abajo
+# terminaría parado en un directorio relativo al $HOME del usuario SSH.
+case "$DEPLOY_PATH" in
+  /*) ;;
+  *) DEPLOY_PATH="/$DEPLOY_PATH" ;;
+esac
+mkdir -p "$(dirname "$DEPLOY_PATH")"
+
+echo "== Deploy $(date) — destino: $DEPLOY_PATH =="
 
 # --- Clonar o actualizar el repo ---
 if [ -d "$DEPLOY_PATH/.git" ]; then
@@ -20,8 +29,12 @@ else
   cd "$DEPLOY_PATH"
 fi
 
+# A partir de acá SIEMPRE estamos parados dentro de $DEPLOY_PATH — se usan
+# rutas relativas al cwd (no se vuelve a prefijar con $DEPLOY_PATH) para no
+# depender de que la variable sea absoluta.
+
 # --- Armar .env desde las variables del pipeline ---
-cat > "$DEPLOY_PATH/.env" <<EOF
+cat > .env <<EOF
 POSTGRES_USER=${POSTGRES_USER:-unravel}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-unravel}
 POSTGRES_DB=${POSTGRES_DB:-unravel}
@@ -52,7 +65,6 @@ EOF
 # --force-recreate porque "docker compose restart" (o un up sin cambios de
 # imagen) puede no releer el .env — nos pasó durante el desarrollo: el
 # backend seguía usando la API key vieja hasta forzar la recreación.
-cd "$DEPLOY_PATH"
 docker compose up -d --build --force-recreate
 
 # --- Limpieza de imágenes viejas (evita llenar el disco con cada deploy) ---
