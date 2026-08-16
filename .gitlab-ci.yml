@@ -14,7 +14,7 @@ backend-tests:
         - backend/**/*
   script:
     - cd backend
-    - pip install --quiet -r requirements.txt
+    - pip install --quiet -r requirements.txt pytest
     - pytest -q
 
 frontend-lint:
