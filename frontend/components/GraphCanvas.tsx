@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Core, ElementDefinition } from "cytoscape";
 import { GraphEdge, GraphNode } from "@/lib/types";
-import { computeLayout, phaseLabelForRatio, PositionedNode } from "@/lib/layout";
 import { NODE_STYLE, RELATION_STYLE } from "@/lib/visualStyle";
 import { ChevronRightIcon } from "@/components/icons";
 
@@ -15,45 +14,52 @@ interface GraphCanvasProps {
 }
 
 const NODE_DIAMETER = 56;
+const CANVAS_PADDING = 60;
+const LABEL_WIDTH = 130;
+
+interface LaidOutNode {
+  node: GraphNode;
+  x: number;
+  y: number;
+}
+
+let dagreRegistered = false;
+
+function formatTime(publishedAt: string | null): string {
+  if (!publishedAt) return "";
+  const date = new Date(publishedAt);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
 
 export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasProps) {
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const cyContainerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
-  const [width, setWidth] = useState(960);
-  const [layout, setLayout] = useState<{
-    positioned: PositionedNode[];
-    ticks: { label: string; x: number }[];
-    height: number;
-  }>({ positioned: [], ticks: [], height: 320 });
+  const [canvas, setCanvas] = useState<{ nodes: LaidOutNode[]; width: number; height: number }>({
+    nodes: [],
+    width: 960,
+    height: 320,
+  });
 
   useEffect(() => {
-    if (!wrapperRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setWidth(Math.max(entry.contentRect.width, 320));
-      }
-    });
-    observer.observe(wrapperRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    setLayout(computeLayout(nodes, width));
-  }, [nodes, width]);
-
-  useEffect(() => {
-    if (!cyContainerRef.current || layout.positioned.length === 0) return;
+    if (!cyContainerRef.current || nodes.length === 0) {
+      setCanvas({ nodes: [], width: 960, height: 320 });
+      return;
+    }
     let cancelled = false;
 
     (async () => {
       const cytoscape = (await import("cytoscape")).default;
+      const dagre = (await import("cytoscape-dagre")).default;
+      if (!dagreRegistered) {
+        cytoscape.use(dagre as any);
+        dagreRegistered = true;
+      }
       if (cancelled || !cyContainerRef.current) return;
 
       const elements: ElementDefinition[] = [
-        ...layout.positioned.map((n) => ({
+        ...nodes.map((n) => ({
           data: { id: n.id, type: n.type, icon: NODE_STYLE[n.type].icon },
-          position: { x: n.x, y: n.y },
         })),
         ...edges.map((e) => ({
           data: {
@@ -133,19 +139,49 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
             },
           },
         ],
-        layout: { name: "preset" },
+        layout: {
+          name: "dagre",
+          rankDir: "LR",
+          nodeSep: 70,
+          rankSep: 110,
+          edgeSep: 20,
+          ranker: "network-simplex",
+          padding: CANVAS_PADDING,
+          fit: false,
+        } as any,
         wheelSensitivity: 0.2,
         minZoom: 1,
         maxZoom: 1,
       });
 
-      cy.zoom(1);
-      cy.pan({ x: 0, y: 0 });
-
       cy.on("tap", "node", (evt) => {
         const id = evt.target.id();
         const node = nodes.find((n) => n.id === id);
         if (node) onSelect(node);
+      });
+
+      cy.one("layoutstop", () => {
+        if (cancelled) return;
+        const bb = cy.elements().boundingBox();
+        const offsetX = CANVAS_PADDING - bb.x1;
+        const offsetY = CANVAS_PADDING - bb.y1;
+        cy.nodes().positions((n) => {
+          const p = n.position();
+          return { x: p.x + offsetX, y: p.y + offsetY };
+        });
+        cy.pan({ x: 0, y: 0 });
+        cy.zoom(1);
+
+        const laidOut: LaidOutNode[] = cy.nodes().map((n) => {
+          const node = nodes.find((original) => original.id === n.id())!;
+          const p = n.position();
+          return { node, x: p.x, y: p.y };
+        });
+        setCanvas({
+          nodes: laidOut,
+          width: bb.w + CANVAS_PADDING * 2,
+          height: bb.h + CANVAS_PADDING * 2 + 50,
+        });
       });
 
       cyRef.current = cy;
@@ -155,7 +191,7 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout.positioned, edges]);
+  }, [nodes, edges]);
 
   useEffect(() => {
     if (!cyRef.current) return;
@@ -172,46 +208,38 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
   }, []);
 
   return (
-    <div ref={wrapperRef} className="relative w-full">
-      {/* Eje de tiempo */}
-      <div className="relative mb-1 h-10 select-none">
-        {layout.ticks.map((tick, i) => {
-          const ratio = layout.ticks.length > 1 ? i / (layout.ticks.length - 1) : 0;
-          return (
+    <div className="relative w-full">
+      <div className="overflow-auto pb-2" style={{ maxHeight: 640 }}>
+        <div style={{ width: canvas.width, height: canvas.height, position: "relative" }}>
+          <div ref={cyContainerRef} className="absolute inset-0" />
+          {canvas.nodes.map(({ node: n, x, y }) => (
             <div
-              key={`${tick.label}-${i}`}
-              className="absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1"
-              style={{ left: tick.x }}
+              key={n.id}
+              className="pointer-events-none absolute flex -translate-x-1/2 flex-col items-center text-center"
+              style={{ left: x, top: y - NODE_DIAMETER / 2 - 22, width: LABEL_WIDTH }}
             >
-              <span className="text-[10px] font-semibold uppercase tracking-widest2 text-unravel-inkSoft/70">
-                {phaseLabelForRatio(ratio)}
-              </span>
-              <span className="font-mono text-[11px] text-unravel-inkSoft">{tick.label}</span>
+              {formatTime(n.published_at) && (
+                <span className="font-mono text-[10px] text-unravel-inkSoft/70">{formatTime(n.published_at)}</span>
+              )}
             </div>
-          );
-        })}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-dashed border-unravel-border" />
-      </div>
-
-      {/* Lienzo del grafo */}
-      <div className="relative" style={{ height: layout.height }}>
-        <div ref={cyContainerRef} className="absolute inset-0" />
-        {layout.positioned.map((n) => (
-          <div
-            key={n.id}
-            className="pointer-events-none absolute flex -translate-x-1/2 flex-col items-center text-center"
-            style={{ left: n.x, top: n.y + NODE_DIAMETER / 2 + 6, width: 130 }}
-          >
-            <span className="truncate text-xs font-bold text-unravel-ink">{n.label}</span>
-            {n.source && <span className="truncate text-[10px] text-unravel-inkSoft">{n.source}</span>}
-            {n.is_latest && (
-              <span className="mt-1 flex items-center gap-0.5 rounded-full bg-unravel-mint px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-unravel-teal">
-                <ChevronRightIcon className="h-2.5 w-2.5" />
-                Latest
-              </span>
-            )}
-          </div>
-        ))}
+          ))}
+          {canvas.nodes.map(({ node: n, x, y }) => (
+            <div
+              key={`${n.id}-label`}
+              className="pointer-events-none absolute flex -translate-x-1/2 flex-col items-center text-center"
+              style={{ left: x, top: y + NODE_DIAMETER / 2 + 6, width: LABEL_WIDTH }}
+            >
+              <span className="truncate text-xs font-bold text-unravel-ink">{n.label}</span>
+              {n.source && <span className="truncate text-[10px] text-unravel-inkSoft">{n.source}</span>}
+              {n.is_latest && (
+                <span className="mt-1 flex items-center gap-0.5 rounded-full bg-unravel-mint px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-unravel-teal">
+                  <ChevronRightIcon className="h-2.5 w-2.5" />
+                  Latest
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

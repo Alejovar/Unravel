@@ -69,7 +69,7 @@ class OpenRouterProvider(LLMProvider):
     @retry(
         reraise=True,
         stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=8),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
         retry=retry_if_exception_type((httpx.HTTPError,)),
     )
     async def _chat(self, system: str, user: str, temperature: float = 0.2) -> str:
@@ -88,7 +88,7 @@ class OpenRouterProvider(LLMProvider):
             ],
             "temperature": temperature,
         }
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=25.0) as client:
             response = await client.post(
                 f"{self.settings.openrouter_base_url}/chat/completions",
                 headers=headers,

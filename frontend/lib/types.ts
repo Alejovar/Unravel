@@ -1,4 +1,4 @@
-export type NodeType = "origin" | "confirmed" | "developing" | "corrected";
+export type NodeType = "origin" | "unverified" | "confirmed" | "developing" | "corrected";
 export type ArticleStatus = "unverified" | "confirmed" | "developing" | "corrected";
 export type RelationType =
   | "confirmation"

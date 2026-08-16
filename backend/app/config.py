@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # --- LLM (OpenRouter — único proveedor soportado) ---
     openrouter_api_key: str = ""
-    openrouter_model: str = "meta-llama/llama-3.3-70b-instruct:free"
+    openrouter_model: str = "google/gemma-4-26b-a4b-it:free"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_site_url: str = "http://localhost:3000"
     openrouter_app_name: str = "Unravel"

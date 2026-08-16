@@ -16,4 +16,4 @@ def get_redis_connection() -> redis.Redis:
 
 @lru_cache
 def get_queue() -> Queue:
-    return Queue(QUEUE_NAME, connection=get_redis_connection(), default_timeout=600)
+    return Queue(QUEUE_NAME, connection=get_redis_connection(), default_timeout=900)

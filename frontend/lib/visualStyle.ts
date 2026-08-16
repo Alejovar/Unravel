@@ -5,6 +5,7 @@ export const NODE_STYLE: Record<
   { fill: string; border: string; borderStyle: "solid" | "dashed"; icon: string; iconColor: string }
 > = {
   origin: { fill: "#FFFFFF", border: "#9C948A", borderStyle: "solid", icon: "", iconColor: "#9C948A" },
+  unverified: { fill: "#FFFFFF", border: "#9C948A", borderStyle: "dashed", icon: "", iconColor: "#9C948A" },
   confirmed: { fill: "#FFFFFF", border: "#1F6F6E", borderStyle: "solid", icon: "check", iconColor: "#1F6F6E" },
   developing: { fill: "#FFFFFF", border: "#C9822E", borderStyle: "dashed", icon: "question", iconColor: "#C9822E" },
   corrected: { fill: "#FFFFFF", border: "#B93A3A", borderStyle: "solid", icon: "cross", iconColor: "#B93A3A" },

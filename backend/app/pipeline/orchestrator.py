@@ -213,15 +213,25 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
     llm_available = settings.llm_configured
     claims_by_article: dict[str, list[Claim]] = {a.id: [] for a in db_articles}
 
+    llm_concurrency = asyncio.Semaphore(4)
+
+    async def _extract_for(article: Article) -> tuple[str, list]:
+        async with llm_concurrency:
+            try:
+                return article.id, await llm.extract_claims(article.text, article.title)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("LLM claim extraction failed for %s: %s", article.id, exc)
+                return article.id, []
+
     if llm_available:
         _set_status(db, analysis, AnalysisStatus.ANALYZING)
         try:
-            for article in db_articles:
-                extracted_claims = await llm.extract_claims(article.text, article.title)
+            results = await asyncio.gather(*(_extract_for(a) for a in db_articles))
+            for article_id, extracted_claims in results:
                 for c in extracted_claims:
-                    claim = Claim(article_id=article.id, text=c.text, subject=c.subject, value=c.value)
+                    claim = Claim(article_id=article_id, text=c.text, subject=c.subject, value=c.value)
                     db.add(claim)
-                    claims_by_article[article.id].append(claim)
+                    claims_by_article[article_id].append(claim)
             db.flush()
         except LLMNotConfiguredError:
             llm_available = False
@@ -230,47 +240,64 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
     relations: list[ArticleRelation] = []
     divergence_count = 0
 
+    pairs = []
     for candidate in candidates:
         a = articles_by_id[candidate.article_a_id]
         b = articles_by_id[candidate.article_b_id]
-
         if a.published_at and b.published_at:
             source, target = (a, b) if a.published_at <= b.published_at else (b, a)
             gap_hours = abs((a.published_at - b.published_at).total_seconds()) / 3600.0
         else:
             source, target = a, b
             gap_hours = None
+        pairs.append((candidate, source, target, gap_hours))
 
-        claim_relation = None
-        explanation = None
-        narrative_changed = False
-
-        if llm_available and claims_by_article.get(source.id) and claims_by_article.get(target.id):
+    async def _compare_for(source: Article, target: Article):
+        async with llm_concurrency:
             try:
                 comparison = await llm.compare_claims(
                     claims_by_article[source.id][0].text, claims_by_article[target.id][0].text
                 )
-                claim_relation = comparison.relation
-                explanation = comparison.explanation
-                db.add(
-                    ClaimComparison(
-                        analysis_id=analysis.id,
-                        claim_a_id=claims_by_article[source.id][0].id,
-                        claim_b_id=claims_by_article[target.id][0].id,
-                        relation=ClaimRelation(comparison.relation),
-                        explanation=comparison.explanation,
-                        confidence=comparison.confidence,
-                    )
-                )
-                if comparison.relation == "CONTRADICTS":
-                    divergence_count += 1
-
                 change = await llm.analyze_change(source.text, target.text)
+                return comparison, change
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("LLM comparison failed for %s/%s: %s", source.id, target.id, exc)
+                return None, None
+
+    comparison_results = await asyncio.gather(
+        *(
+            _compare_for(source, target)
+            if llm_available and claims_by_article.get(source.id) and claims_by_article.get(target.id)
+            else asyncio.sleep(0, result=(None, None))
+            for _, source, target, _ in pairs
+        )
+    )
+
+    for (candidate, source, target, gap_hours), (comparison, change) in zip(pairs, comparison_results):
+        claim_relation = None
+        explanation = None
+        narrative_changed = False
+
+        if comparison is not None:
+            claim_relation = comparison.relation
+            explanation = comparison.explanation
+            db.add(
+                ClaimComparison(
+                    analysis_id=analysis.id,
+                    claim_a_id=claims_by_article[source.id][0].id,
+                    claim_b_id=claims_by_article[target.id][0].id,
+                    relation=ClaimRelation(comparison.relation),
+                    explanation=comparison.explanation,
+                    confidence=comparison.confidence,
+                )
+            )
+            if comparison.relation == "CONTRADICTS":
+                divergence_count += 1
+
+            if change is not None:
                 narrative_changed = change.changed
                 if change.explanation:
                     explanation = f"{explanation} {change.explanation}".strip()
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("LLM comparison failed for %s/%s: %s", source.id, target.id, exc)
 
         relation_label = classify_relation(
             ClassificationInput(
