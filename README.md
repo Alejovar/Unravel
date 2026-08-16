@@ -39,7 +39,7 @@ The architecture deliberately separates two engines:
       RSS, search,               narrative change
       hyperlinks/citations)      detection
       similarity (TF-IDF,        final summary
-      BM25, n-grams,             (OpenRouter, a single
+      BM25, n-grams,             (NVIDIA NIM, a single
       spaCy, time)               free model)
                 |                       |
                 +-----------+-----------+
@@ -68,11 +68,15 @@ already collected.
 | Source discovery | GDELT DOC 2.0 API, RSS, web search (DuckDuckGo HTML, no API key), hyperlinks/citations |
 | LLM-free similarity | TF-IDF and BM25 (scikit-learn / rank-bm25), n-grams, entities (spaCy), temporal proximity |
 | Database | PostgreSQL (SQLAlchemy + Alembic), optional pgvector |
-| Language model | **A single free model through OpenRouter** (`OPENROUTER_API_KEY`) |
+| Language model | **A single free model through NVIDIA NIM** (`meta/llama-3.1-8b-instruct`, via `OPENROUTER_API_KEY`) |
 
 Only **one** API key is needed for the project to work end to end: the
-OpenRouter one. Everything else (GDELT, RSS, search) uses public endpoints
-with no authentication.
+NVIDIA NIM one (get it for free at https://build.nvidia.com). Everything
+else (GDELT, RSS, search) uses public endpoints with no authentication.
+The LLM client speaks the OpenAI/OpenRouter-compatible chat completions
+format, so it also works unchanged with OpenRouter or any other
+compatible provider if you prefer — just point `OPENROUTER_BASE_URL` and
+`OPENROUTER_MODEL` at it.
 
 ## Repository layout
 
@@ -88,11 +92,11 @@ part.
 
 ## Getting the project up
 
-1. Copy the environment file and fill in your OpenRouter API key:
+1. Copy the environment file and fill in your NVIDIA NIM API key:
 
    ```bash
    cp .env.example .env
-   # open .env and paste your OPENROUTER_API_KEY (https://openrouter.ai/keys)
+   # open .env and paste your OPENROUTER_API_KEY (get a free one at https://build.nvidia.com)
    ```
 
 2. Bring everything up with Docker Compose:

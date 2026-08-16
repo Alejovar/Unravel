@@ -134,22 +134,34 @@ def extract(html: str, url: str) -> ExtractedArticle | None:
         paragraphs = [p.get_text(" ", strip=True) for p in soup.find_all("p")]
         text = "\n".join(p for p in paragraphs if len(p) > 40)
 
-    if not published_at:
-        meta_date = None
-        for meta_name in (
-            "article:published_time",
-            "og:updated_time",
-            "date",
-            "pubdate",
-            "publish-date",
-        ):
-            tag = soup.find("meta", attrs={"property": meta_name}) or soup.find(
-                "meta", attrs={"name": meta_name}
-            )
-            if tag and tag.get("content"):
-                meta_date = tag["content"]
-                break
-        published_at = _parse_date(meta_date)
+    # Trafilatura's date guesser often only resolves the calendar date (no
+    # time-of-day), even when the page's own meta tags carry a full
+    # timestamp (e.g. article:published_time). Always check the meta tags
+    # and prefer them whenever they give a real time, instead of only
+    # falling back to them when trafilatura found nothing at all.
+    meta_date = None
+    for meta_name in (
+        "article:published_time",
+        "og:updated_time",
+        "date",
+        "pubdate",
+        "publish-date",
+    ):
+        tag = soup.find("meta", attrs={"property": meta_name}) or soup.find(
+            "meta", attrs={"name": meta_name}
+        )
+        if tag and tag.get("content"):
+            meta_date = tag["content"]
+            break
+    meta_published_at = _parse_date(meta_date)
+
+    def _has_real_time(dt: datetime | None) -> bool:
+        return dt is not None and not (dt.hour == 0 and dt.minute == 0 and dt.second == 0)
+
+    if _has_real_time(meta_published_at):
+        published_at = meta_published_at
+    elif published_at is None:
+        published_at = meta_published_at
 
     canonical_url = _canonicalize(url, soup)
     links = _extract_links(html, url)
