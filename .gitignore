@@ -22,6 +22,7 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+CI_CD_SETUP.md
 
 # --- OS / editor ---
 .DS_Store

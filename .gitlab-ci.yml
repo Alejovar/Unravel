@@ -1,0 +1,64 @@
+stages:
+  - test
+  - deploy
+
+# ============================================================
+# Test
+# ============================================================
+
+backend-tests:
+  stage: test
+  image: python:3.11-slim
+  rules:
+    - changes:
+        - backend/**/*
+  script:
+    - cd backend
+    - pip install --quiet -r requirements.txt
+    - pytest -q
+
+frontend-lint:
+  stage: test
+  image: node:20-alpine
+  rules:
+    - changes:
+        - frontend/**/*
+  script:
+    - cd frontend
+    - npm ci
+    - npm run lint
+    - npx tsc --noEmit
+
+# ============================================================
+# Deploy (SSH a la EC2, ver deploy/remote-deploy.sh)
+# ============================================================
+
+deploy:
+  stage: deploy
+  image: alpine:3.20
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  environment:
+    name: production
+    url: http://$DEPLOY_HOST:3000
+  before_script:
+    - apk add --no-cache openssh-client bash
+    - eval "$(ssh-agent -s)"
+    - echo "$DEPLOY_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+  script:
+    - scp deploy/remote-deploy.sh "$DEPLOY_USER@$DEPLOY_HOST:/tmp/remote-deploy.sh"
+    - >
+      ssh "$DEPLOY_USER@$DEPLOY_HOST" "
+      export GIT_REPO_URL='$CI_REPOSITORY_URL';
+      export GIT_BRANCH='$CI_COMMIT_BRANCH';
+      export DEPLOY_PATH='${DEPLOY_PATH:-/opt/unravel}';
+      export PUBLIC_HOST='$DEPLOY_HOST';
+      export POSTGRES_USER='$POSTGRES_USER';
+      export POSTGRES_PASSWORD='$POSTGRES_PASSWORD';
+      export POSTGRES_DB='$POSTGRES_DB';
+      export OPENROUTER_API_KEY='$OPENROUTER_API_KEY';
+      export OPENROUTER_MODEL='$OPENROUTER_MODEL';
+      export OPENROUTER_BASE_URL='$OPENROUTER_BASE_URL';
+      bash /tmp/remote-deploy.sh"
