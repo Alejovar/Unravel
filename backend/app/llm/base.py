@@ -1,12 +1,12 @@
-"""Interfaz de proveedor de modelo de lenguaje.
+"""Language model provider interface.
 
-Unravel usa el LLM únicamente para las tareas que requieren comprensión
-semántica (extraer afirmaciones, compararlas, explicar cambios narrativos
-y redactar el resumen final). Todo lo demás —scraping, discovery,
-similitud— ocurre antes, sin LLM. Esta clase existe para que el proyecto
-no dependa de un proveedor concreto; hoy solo se implementa OpenRouter
-(ver openrouter.py), pero cualquier otro proveedor compatible puede
-añadirse implementando esta misma interfaz.
+Unravel uses the LLM only for the tasks that require semantic
+understanding (extracting claims, comparing them, explaining narrative
+changes and writing the final summary). Everything else — scraping,
+discovery, similarity — happens beforehand, without an LLM. This class
+exists so the project does not depend on one concrete provider; today only
+OpenRouter is implemented (see openrouter.py), but any other compatible
+provider can be added by implementing this same interface.
 """
 
 from __future__ import annotations
@@ -17,29 +17,29 @@ from app.llm.types import ClaimComparisonResult, EvidenceItem, ExtractedClaim, N
 
 
 class LLMNotConfiguredError(RuntimeError):
-    """Se lanza cuando no hay una OPENROUTER_API_KEY configurada."""
+    """Raised when no OPENROUTER_API_KEY is configured."""
 
 
 class LLMProvider(ABC):
     @abstractmethod
     async def extract_claims(self, article_text: str, article_title: str) -> list[ExtractedClaim]:
-        """Extrae afirmaciones verificables/cuantificables de un artículo."""
+        """Extracts verifiable/quantifiable claims from an article."""
         raise NotImplementedError
 
     @abstractmethod
     async def compare_claims(self, claim_a: str, claim_b: str) -> ClaimComparisonResult:
-        """Clasifica la relación entre dos afirmaciones: SUPPORTS,
-        CONTRADICTS, RELATED o INSUFFICIENT."""
+        """Classifies the relation between two claims: SUPPORTS,
+        CONTRADICTS, RELATED or INSUFFICIENT."""
         raise NotImplementedError
 
     @abstractmethod
     async def analyze_change(self, previous_text: str, current_text: str) -> NarrativeChange:
-        """Explica cómo cambió la narrativa entre dos versiones de la
-        historia (p.ej. de hipótesis a afirmación confirmada)."""
+        """Explains how the narrative changed between two versions of the
+        story (e.g. from hypothesis to confirmed claim)."""
         raise NotImplementedError
 
     @abstractmethod
     async def summarize(self, evidence: list[EvidenceItem]) -> str:
-        """Redacta el resumen final citando únicamente la evidencia ya
-        procesada por el motor sin LLM."""
+        """Writes the final summary citing only the evidence already
+        processed by the LLM-free engine."""
         raise NotImplementedError

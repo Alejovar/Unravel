@@ -16,11 +16,12 @@ down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-# create_type=False: los tipos se crean explícitamente una sola vez al
-# inicio de upgrade() (ver más abajo). Sin esto, SQLAlchemy intenta
-# emitir CREATE TYPE otra vez automáticamente al crear cada tabla que
-# usa el enum como columna, lo que revienta con "type already exists".
-# NOTA: create_type solo lo respeta postgresql.ENUM, no el sa.Enum genérico.
+# create_type=False: the types are created explicitly, once, at the start
+# of upgrade() (see below). Without this, SQLAlchemy automatically emits
+# CREATE TYPE again for every table that uses the enum as a column type,
+# which blows up with "type already exists".
+# NOTE: create_type is only honoured by postgresql.ENUM, not by the generic
+# sa.Enum.
 analysis_status = PGEnum(
     "queued", "scraping", "discovering", "comparing", "analyzing", "done", "failed",
     name="analysis_status",

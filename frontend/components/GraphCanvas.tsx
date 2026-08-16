@@ -30,18 +30,18 @@ function formatTime(publishedAt: string | null): string {
   if (!publishedAt || !hasKnownTime(publishedAt)) return "";
   const date = new Date(publishedAt);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 /**
- * Con umbrales de similitud laxos, un análisis puede traer decenas de
- * relaciones candidatas por artículo (todas las fuentes hablando del mismo
- * evento se parecen entre sí). Dibujar todas vuelve el grafo ilegible y
- * oculta la trayectoria real de la noticia. Para la vista, nos quedamos
- * solo con la relación más fuerte que conecta a cada artículo con su
- * "padre" más probable — preferimos evidencia observada (hyperlink real)
- * sobre inferida, y a igualdad de tipo, mayor confianza — así el grafo
- * queda como un árbol legible en vez de una maraña casi completa.
+ * With loose similarity thresholds a single analysis can yield dozens of
+ * candidate relations per article (every source covering the same event
+ * looks alike). Drawing all of them makes the graph unreadable and hides
+ * the story's actual trajectory. For the view we keep only the strongest
+ * relation connecting each article to its most likely "parent" — observed
+ * evidence (a real hyperlink) wins over inferred, and within the same kind
+ * the higher confidence wins — so the graph reads as a tree instead of an
+ * almost fully connected tangle.
  */
 function pruneToStrongestParent(edges: GraphEdge[]): GraphEdge[] {
   const bestByTarget = new Map<string, GraphEdge>();
@@ -69,10 +69,10 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
   });
 
   const displayEdges = useMemo(() => pruneToStrongestParent(edges), [edges]);
-  // Nodo "más reciente" visualmente: el que no tiene nada apuntando hacia
-  // afuera en el árbol mostrado (no en las 200+ relaciones crudas), y que
-  // además está conectado a algo — un nodo totalmente aislado no es parte
-  // de la trayectoria trazada, así que no cuenta como "latest".
+  // Visually "latest" node: the one with nothing pointing outwards in the
+  // rendered tree (not in the 200+ raw relations) that is also connected to
+  // something — a fully isolated node is not part of the traced trajectory,
+  // so it does not count as "latest".
   const parentOf = useMemo(() => new Set(displayEdges.map((e) => e.source)), [displayEdges]);
   const connected = useMemo(
     () => new Set(displayEdges.flatMap((e) => [e.source, e.target])),
@@ -186,12 +186,12 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
         if (node) onSelect(node);
       });
 
-      // Se corre el layout explícitamente (en vez de pasarlo en las opciones
-      // del constructor) para poder engancharse a "layoutstop" ANTES de que
-      // arranque: dagre corre síncronamente, así que si el listener se
-      // registra después de crear la instancia, el evento ya se disparó y
-      // nunca se recibe — el estado de React (tamaño real del grafo, labels)
-      // se queda pegado en el valor inicial.
+      // The layout is run explicitly (instead of passing it in the
+      // constructor options) so we can hook "layoutstop" BEFORE it starts:
+      // dagre runs synchronously, so if the listener is registered after the
+      // instance is created the event has already fired and is never
+      // received — React state (real graph size, labels) would stay stuck on
+      // its initial value.
       const dagreLayout = cy.layout({
         name: "dagre",
         rankDir: "LR",
@@ -248,9 +248,9 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelect }: GraphCanvasP
 
   useEffect(() => {
     if (!cyRef.current) return;
-    // El contenedor cambia de tamaño recién después de que el layout de
-    // dagre calcula las posiciones finales (ver setCanvas en layoutstop);
-    // Cytoscape no detecta ese resize del DOM por su cuenta.
+    // The container is resized only after dagre computes the final
+    // positions (see setCanvas in layoutstop); Cytoscape does not detect
+    // that DOM resize on its own.
     cyRef.current.resize();
     cyRef.current.pan({ x: 0, y: 0 });
     cyRef.current.zoom(1);

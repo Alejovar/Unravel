@@ -1,31 +1,31 @@
 #!/bin/bash
-# Se ejecuta EN el servidor (vía SSH desde el job de deploy de GitLab CI/CD).
-# Espera las variables de entorno ya exportadas por el job: ver .gitlab-ci.yml
-# y CI_CD_SETUP.md para la lista completa.
+# Runs ON the server (over SSH from the GitLab CI/CD deploy job).
+# It expects the environment variables already exported by the job: see
+# .gitlab-ci.yml and CI_CD_SETUP.md for the full list.
 set -euo pipefail
 
-: "${GIT_REPO_URL:?falta GIT_REPO_URL}"
+: "${GIT_REPO_URL:?GIT_REPO_URL is missing}"
 : "${DEPLOY_PATH:=/opt/unravel}"
 : "${GIT_BRANCH:=main}"
 
-# Normaliza a ruta absoluta por si DEPLOY_PATH llegó sin la barra inicial
-# (ej. "opt/unravel" en vez de "/opt/unravel") — si no, cd más abajo
-# terminaría parado en un directorio relativo al $HOME del usuario SSH.
+# Normalise to an absolute path in case DEPLOY_PATH arrived without the
+# leading slash (e.g. "opt/unravel" instead of "/opt/unravel") — otherwise
+# the cd below would land in a directory relative to the SSH user's $HOME.
 case "$DEPLOY_PATH" in
   /*) ;;
   *) DEPLOY_PATH="/$DEPLOY_PATH" ;;
 esac
-echo "== Deploy $(date) — destino: $DEPLOY_PATH =="
+echo "== Deploy $(date) — target: $DEPLOY_PATH =="
 
-# /opt (o el padre que sea) suele ser de root — se crea el directorio de
-# destino con sudo y se lo cede al usuario que corre el deploy, así el
-# resto del script (clone/pull/docker) no necesita privilegios.
+# /opt (or whatever the parent is) is usually owned by root — the target
+# directory is created with sudo and handed over to the user running the
+# deploy, so the rest of the script (clone/pull/docker) needs no privileges.
 if [ ! -d "$DEPLOY_PATH" ]; then
   sudo mkdir -p "$DEPLOY_PATH"
   sudo chown "$(id -u):$(id -g)" "$DEPLOY_PATH"
 fi
 
-# --- Clonar o actualizar el repo ---
+# --- Clone or update the repository ---
 if [ -d "$DEPLOY_PATH/.git" ]; then
   cd "$DEPLOY_PATH"
   git fetch origin "$GIT_BRANCH"
@@ -35,11 +35,11 @@ else
   cd "$DEPLOY_PATH"
 fi
 
-# A partir de acá SIEMPRE estamos parados dentro de $DEPLOY_PATH — se usan
-# rutas relativas al cwd (no se vuelve a prefijar con $DEPLOY_PATH) para no
-# depender de que la variable sea absoluta.
+# From here on we are ALWAYS inside $DEPLOY_PATH — paths are relative to
+# the cwd (never prefixed with $DEPLOY_PATH again) so nothing depends on
+# that variable being absolute.
 
-# --- Armar .env desde las variables del pipeline ---
+# --- Build .env from the pipeline variables ---
 cat > .env <<EOF
 POSTGRES_USER=${POSTGRES_USER:-unravel}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-unravel}
@@ -67,13 +67,13 @@ ENV=production
 NEXT_PUBLIC_API_BASE_URL=http://${PUBLIC_HOST}:8000
 EOF
 
-# --- Levantar el stack ---
-# --force-recreate porque "docker compose restart" (o un up sin cambios de
-# imagen) puede no releer el .env — nos pasó durante el desarrollo: el
-# backend seguía usando la API key vieja hasta forzar la recreación.
+# --- Bring the stack up ---
+# --force-recreate because "docker compose restart" (or an up with no image
+# changes) may not re-read .env — it bit us during development: the backend
+# kept using the old API key until the containers were forcibly recreated.
 docker compose up -d --build --force-recreate
 
-# --- Limpieza de imágenes viejas (evita llenar el disco con cada deploy) ---
+# --- Clean up old images (keeps each deploy from filling the disk) ---
 docker image prune -f
 
-echo "== Deploy listo: http://${PUBLIC_HOST}:3000 =="
+echo "== Deploy finished: http://${PUBLIC_HOST}:3000 =="

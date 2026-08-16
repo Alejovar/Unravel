@@ -30,7 +30,7 @@ frontend-lint:
     - npx tsc --noEmit
 
 # ============================================================
-# Deploy (SSH a la EC2, ver deploy/remote-deploy.sh)
+# Deploy (SSH into the EC2 instance, see deploy/remote-deploy.sh)
 # ============================================================
 
 deploy:

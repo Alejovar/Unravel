@@ -1,8 +1,8 @@
-"""Orquesta el flujo completo de un análisis (VeriGraph.md sección 3):
+"""Orchestrates the full flow of an analysis (VeriGraph.md section 3):
 
-URL/titular -> scraping -> discovery -> dedup -> similitud sin LLM ->
-LLM (claims, comparaciones, resumen) -> grafo + timeline en la base de
-datos, listos para que la API los sirva al frontend.
+URL/headline -> scraping -> discovery -> dedup -> LLM-free similarity ->
+LLM (claims, comparisons, summary) -> graph + timeline in the database,
+ready for the API to serve them to the frontend.
 """
 
 from __future__ import annotations
@@ -92,9 +92,9 @@ async def _run_discovery(
 
 
 def _build_synthetic_seed(query_input: str) -> ExtractedArticle:
-    """Cuando el usuario pega un titular/descripción en vez de una URL, no
-    hay artículo semilla que scrapear: se usa el texto como semilla de
-    búsqueda únicamente (no se inserta como fuente en el grafo)."""
+    """When the user pastes a headline/description instead of a URL there
+    is no seed article to scrape: the text is used purely as a search seed
+    (it is not inserted as a source in the graph)."""
     return ExtractedArticle(
         url="",
         canonical_url="",
@@ -106,7 +106,7 @@ def _build_synthetic_seed(query_input: str) -> ExtractedArticle:
 
 
 def run_analysis(analysis_id: str) -> None:
-    """Punto de entrada síncrono usado por el worker de RQ."""
+    """Synchronous entry point used by the RQ worker."""
     from app.db import SessionLocal
 
     db = SessionLocal()
@@ -128,9 +128,9 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
     settings = get_settings()
     analysis = db.get(Analysis, analysis_id)
     if analysis is None:
-        raise ValueError(f"Analysis {analysis_id} no existe")
+        raise ValueError(f"Analysis {analysis_id} does not exist")
 
-    # --- 1. Scraping del artículo semilla (si el input es una URL) ---
+    # --- 1. Scrape the seed article (if the input is a URL) ---
     _set_status(db, analysis, AnalysisStatus.SCRAPING)
     query_input = analysis.query_input.strip()
 
@@ -139,8 +139,8 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
         if seed is None:
             analysis.status = AnalysisStatus.FAILED
             analysis.error = (
-                "No se pudo extraer contenido de la URL proporcionada. "
-                "Verifica que el enlace sea accesible públicamente."
+                "No content could be extracted from the provided URL. "
+                "Check that the link is publicly accessible."
             )
             db.add(analysis)
             db.commit()
@@ -150,7 +150,7 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
         seed = _build_synthetic_seed(query_input)
         has_real_seed = False
 
-    # --- 2. Discovery (GDELT + RSS + búsqueda + hyperlinks) ---
+    # --- 2. Discovery (GDELT + RSS + search + hyperlinks) ---
     _set_status(db, analysis, AnalysisStatus.DISCOVERING)
     if has_real_seed:
         found = await _run_discovery(seed, settings)
@@ -158,16 +158,16 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
         candidates = await discover_candidates(seed)
         found = await _scrape_candidates([c.url for c in candidates])
 
-    # --- 3. Deduplicación ---
+    # --- 3. Deduplication ---
     deduped = dedupe_articles(found)
     if not deduped:
         analysis.status = AnalysisStatus.FAILED
-        analysis.error = "No se encontraron fuentes relacionadas para esta historia."
+        analysis.error = "No related sources were found for this story."
         db.add(analysis)
         db.commit()
         return
 
-    # --- 4. Persistir artículos + extraer entidades ---
+    # --- 4. Persist articles + extract entities ---
     db_articles: list[Article] = []
     for extracted in deduped:
         entities = extract_entities(extracted.text)
@@ -203,12 +203,12 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
     for a in db_articles:
         db.refresh(a)
 
-    # --- 5. Similitud sin LLM -> candidatos de relación ---
+    # --- 5. LLM-free similarity -> relation candidates ---
     _set_status(db, analysis, AnalysisStatus.COMPARING)
     candidates = compute_candidates(db_articles)
     articles_by_id = {a.id: a for a in db_articles}
 
-    # --- 6. Motor de análisis (LLM, opcional) ---
+    # --- 6. Analysis engine (LLM, optional) ---
     llm = get_llm_provider()
     llm_available = settings.llm_configured
     claims_by_article: dict[str, list[Claim]] = {a.id: [] for a in db_articles}
@@ -236,7 +236,7 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
         except LLMNotConfiguredError:
             llm_available = False
 
-    # --- 7. Construir relaciones (edges) usando señales + LLM cuando aplica ---
+    # --- 7. Build relations (edges) from the signals + LLM when available ---
     relations: list[ArticleRelation] = []
     divergence_count = 0
 
@@ -333,7 +333,7 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
 
     db.flush()
 
-    # --- 8. Resumen final ---
+    # --- 8. Final summary ---
     if llm_available:
         try:
             evidence: list[EvidenceItem] = build_evidence(
@@ -352,9 +352,9 @@ async def _run_analysis_async(db: Session, analysis_id: str) -> None:
     latest = ordered[-1] if ordered else origin
     correction_edges = [r for r in relations if r.relation == RelationType.CORRECTION]
     story_drift_label = (
-        f"{correction_edges[0].explanation or 'Se detectó una corrección formal sobre una versión anterior.'}"
+        f"{correction_edges[0].explanation or 'A formal correction to an earlier version was detected.'}"
         if correction_edges
-        else ("Se detectaron afirmaciones divergentes entre fuentes." if divergence_count else "Sin divergencias mayores detectadas.")
+        else ("Divergent claims were detected between sources." if divergence_count else "No major divergences detected.")
     )
 
     summary = AnalysisSummary(

@@ -15,7 +15,7 @@ export function SearchHero() {
     event.preventDefault();
     const trimmed = value.trim();
     if (trimmed.length < 3) {
-      setError("Pega una URL, un titular o una descripción breve.");
+      setError("Paste a URL, a headline, or a short description.");
       return;
     }
     setLoading(true);
@@ -24,7 +24,7 @@ export function SearchHero() {
       const { analysis_id } = await createAnalysis(trimmed);
       router.push(`/trace/${analysis_id}?q=${encodeURIComponent(trimmed)}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Ocurrió un error inesperado.");
+      setError(err instanceof ApiError ? err.message : "An unexpected error occurred.");
       setLoading(false);
     }
   }
@@ -36,7 +36,7 @@ export function SearchHero() {
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="https://medio.com/noticia — o pega un titular, o una descripción breve"
+          placeholder="https://outlet.com/story — or paste a headline, or a short description"
           className="w-full bg-transparent text-sm text-unravel-ink placeholder:text-unravel-inkSoft/70 focus:outline-none"
           disabled={loading}
         />
@@ -45,7 +45,7 @@ export function SearchHero() {
           disabled={loading}
           className="shrink-0 rounded-full bg-unravel-teal px-5 py-2 text-sm font-semibold text-white transition hover:bg-unravel-tealDark disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Analizando…" : "Trace it"}
+          {loading ? "Analysing…" : "Trace it"}
         </button>
       </div>
       {error && <p className="mt-3 text-center text-sm text-unravel-red">{error}</p>}

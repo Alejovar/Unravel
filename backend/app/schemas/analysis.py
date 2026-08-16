@@ -7,7 +7,7 @@ from app.schemas.graph import GraphResponse
 
 class AnalysisCreateRequest(BaseModel):
     query_input: str = Field(
-        ..., min_length=3, description="URL, titular o descripción breve de la noticia"
+        ..., min_length=3, description="URL, headline or short description of the story"
     )
 
 

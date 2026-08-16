@@ -2,26 +2,26 @@
 
 > *Unravel the story behind the news.*
 
-Unravel es una herramienta de alfabetización mediática e informacional. El
-usuario pega una URL, un titular o una descripción breve, y Unravel
-reconstruye —con evidencia observable— cómo apareció esa historia, cómo se
-propagó entre medios y cuentas, y cómo fue cambiando mientras se difundía.
+Unravel is a media and information literacy tool. The user pastes a URL, a
+headline or a short description, and Unravel reconstructs — with
+observable evidence — how that story first appeared, how it spread across
+outlets and accounts, and how it changed while it travelled.
 
-El proyecto **no decide automáticamente si una noticia es verdadera o
-falsa**. Su objetivo es reducir la fricción de investigar una noticia a
-mano: mostrar las fuentes, el orden cronológico, las relaciones entre
-publicaciones (confirmación, actualización, contradicción, corrección,
-reacción) y un resumen sustentado en evidencia, para que cada persona
-pueda formar su propio criterio.
+The project **does not automatically decide whether a story is true or
+false**. Its goal is to remove the friction of investigating a story by
+hand: showing the sources, the chronological order, the relations between
+publications (confirmation, update, contradiction, correction, reaction)
+and an evidence-backed summary, so that each person can form their own
+judgement.
 
-Proyecto para el **Youth Hackathon 2026 — Alfabetización Mediática e
-Informacional (UNESCO)**.
+Built for the **Youth Hackathon 2026 — Media and Information Literacy
+(UNESCO)**.
 
 ---
 
-## Cómo está dividido el sistema
+## How the system is split
 
-La arquitectura separa deliberadamente dos motores:
+The architecture deliberately separates two engines:
 
 ```
                         UNRAVEL
@@ -29,93 +29,93 @@ La arquitectura separa deliberadamente dos motores:
                 +-----------+-----------+
                 |                       |
                 v                       v
-     MOTOR DE RASTREO           MOTOR DE ANÁLISIS
-     (sin LLM)                  (con LLM)
-     --------------------       --------------------
-     scraping (httpx,           extracción de claims
-     trafilatura, bs4,          comparación de claims
-     Playwright fallback)       (SUPPORTS/CONTRADICTS/
-     discovery (GDELT,          RELATED/INSUFFICIENT)
-     RSS, búsqueda,             detección de cambio
-     hyperlinks/citas)          narrativo
-     similitud (TF-IDF,         resumen final
-     BM25, n-grams,             (OpenRouter, un solo
-     spaCy, tiempo)             modelo gratuito)
+      TRACING ENGINE             ANALYSIS ENGINE
+      (no LLM)                   (with LLM)
+      --------------------       --------------------
+      scraping (httpx,           claim extraction
+      trafilatura, bs4,          claim comparison
+      Playwright fallback)       (SUPPORTS/CONTRADICTS/
+      discovery (GDELT,          RELATED/INSUFFICIENT)
+      RSS, search,               narrative change
+      hyperlinks/citations)      detection
+      similarity (TF-IDF,        final summary
+      BM25, n-grams,             (OpenRouter, a single
+      spaCy, time)               free model)
                 |                       |
                 +-----------+-----------+
                             |
                             v
-                  GRAFO + TIMELINE (JSON)
+                   GRAPH + TIMELINE (JSON)
 ```
 
-El motor de rastreo encuentra y organiza fuentes usando scraping y
-algoritmos clásicos (nada de LLM). Solo cuando ya existe un conjunto de
-fuentes relevantes entra el modelo de lenguaje, y únicamente para las
-tareas que requieren comprensión semántica: extraer afirmaciones,
-compararlas, explicar cómo cambió la narrativa y redactar el resumen final
-citando la evidencia ya recolectada.
+The tracing engine finds and organises sources using scraping and classic
+algorithms (no LLM at all). Only once a set of relevant sources exists does
+the language model step in, and only for the tasks that require semantic
+understanding: extracting claims, comparing them, explaining how the
+narrative changed, and writing the final summary citing the evidence
+already collected.
 
 ## Stack
 
-| Componente | Tecnología |
+| Component | Technology |
 |---|---|
 | Frontend | Next.js 14 (App Router) + React + TypeScript + Tailwind CSS |
-| Grafo | Cytoscape.js |
+| Graph | Cytoscape.js |
 | Backend | Python + FastAPI |
-| Cola / jobs asíncronos | Redis + RQ (workers en Python) |
-| Descarga de páginas | httpx |
-| Extracción de contenido | Trafilatura + BeautifulSoup, fallback Playwright |
-| Descubrimiento de fuentes | GDELT DOC 2.0 API, RSS, búsqueda web (DuckDuckGo HTML, sin API key), hyperlinks/citas |
-| Similitud sin LLM | TF-IDF y BM25 (scikit-learn / rank-bm25), n-gramas, entidades (spaCy), cercanía temporal |
-| Base de datos | PostgreSQL (SQLAlchemy + Alembic), pgvector opcional |
-| Modelo de lenguaje | **Un solo modelo gratuito vía OpenRouter** (`OPENROUTER_API_KEY`) |
+| Queue / async jobs | Redis + RQ (Python workers) |
+| Page download | httpx |
+| Content extraction | Trafilatura + BeautifulSoup, Playwright fallback |
+| Source discovery | GDELT DOC 2.0 API, RSS, web search (DuckDuckGo HTML, no API key), hyperlinks/citations |
+| LLM-free similarity | TF-IDF and BM25 (scikit-learn / rank-bm25), n-grams, entities (spaCy), temporal proximity |
+| Database | PostgreSQL (SQLAlchemy + Alembic), optional pgvector |
+| Language model | **A single free model through OpenRouter** (`OPENROUTER_API_KEY`) |
 
-Solo se necesita **una** API key para que el proyecto funcione al 100%: la
-de OpenRouter. Todo lo demás (GDELT, RSS, búsqueda) usa endpoints públicos
-sin autenticación.
+Only **one** API key is needed for the project to work end to end: the
+OpenRouter one. Everything else (GDELT, RSS, search) uses public endpoints
+with no authentication.
 
-## Estructura del repo
+## Repository layout
 
 ```
-backend/    API FastAPI, worker, pipeline de scraping/discovery/similitud/LLM
-frontend/   Next.js — pantalla de búsqueda y pantalla del grafo de trazabilidad
+backend/    FastAPI API, worker, scraping/discovery/similarity/LLM pipeline
+frontend/   Next.js — search screen and traceability graph screen
 docker-compose.yml
 .env.example
 ```
 
-Ver `backend/README.md` y `frontend/README.md` para detalle de cada parte.
+See `backend/README.md` and `frontend/README.md` for the details of each
+part.
 
-## Levantar el proyecto
+## Getting the project up
 
-1. Copia el archivo de entorno y completa tu API key de OpenRouter:
+1. Copy the environment file and fill in your OpenRouter API key:
 
    ```bash
    cp .env.example .env
-   # abre .env y pega tu OPENROUTER_API_KEY (https://openrouter.ai/keys)
+   # open .env and paste your OPENROUTER_API_KEY (https://openrouter.ai/keys)
    ```
 
-2. Levanta todo con Docker Compose:
+2. Bring everything up with Docker Compose:
 
    ```bash
    docker compose up --build
    ```
 
-   Esto levanta: PostgreSQL, Redis, el backend (FastAPI en
-   `http://localhost:8000`), el worker que procesa los análisis, y el
-   frontend (Next.js en `http://localhost:3000`).
+   This starts: PostgreSQL, Redis, the backend (FastAPI on
+   `http://localhost:8000`), the worker that processes analyses, and the
+   frontend (Next.js on `http://localhost:3000`).
 
-3. Abre `http://localhost:3000`, pega una URL de una noticia y presiona
-   **Trace it**.
+3. Open `http://localhost:3000`, paste a news URL and press **Trace it**.
 
-### Desarrollo sin Docker
+### Development without Docker
 
-Ver las instrucciones detalladas en `backend/README.md` y
-`frontend/README.md` para correr cada servicio localmente (requiere
-Postgres y Redis corriendo, por ejemplo vía `docker compose up db redis`).
+See the detailed instructions in `backend/README.md` and
+`frontend/README.md` to run each service locally (it requires Postgres and
+Redis running, for example through `docker compose up db redis`).
 
-## Modelo de datos del grafo
+## Graph data model
 
-El backend expone el grafo como JSON con la forma:
+The backend exposes the graph as JSON with this shape:
 
 ```json
 {
@@ -147,18 +147,21 @@ El backend expone el grafo como JSON con la forma:
 }
 ```
 
-Esta misma estructura alimenta directamente el componente de grafo del
-frontend (Cytoscape.js) y la línea de tiempo.
+That same structure feeds the frontend graph component (Cytoscape.js) and
+the timeline directly.
 
-## Limitaciones conocidas del MVP
+## Known MVP limitations
 
-- La relación `POSSIBLY_DERIVED_FROM` (o `developing`/`republication`
-  inferidas) se marca explícitamente como **inferida**, nunca como prueba
-  de copia directa. Solo `CITES`/`LINKS_TO` (hyperlinks o citas
-  explícitas) se tratan como relación observada.
-- El discovery está acotado por `DISCOVERY_MAX_DEPTH` y
-  `DISCOVERY_MAX_SOURCES` (ver `.env.example`) para mantener el análisis
-  rápido y evitar coste innecesario del LLM.
-- spaCy y Playwright son *fallbacks* opcionales: si no están instalados o
-  el modelo de idioma no está descargado, el sistema sigue funcionando con
-  las demás señales (TF-IDF, BM25, n-gramas, fechas, enlaces).
+- The `POSSIBLY_DERIVED_FROM` relation (or the inferred
+  `developing`/`republication` ones) is explicitly flagged as **inferred**,
+  never as proof of direct copying. Only `CITES`/`LINKS_TO` (hyperlinks or
+  explicit citations) are treated as an observed relation.
+- Discovery is bounded by `DISCOVERY_MAX_DEPTH` and
+  `DISCOVERY_MAX_SOURCES` (see `.env.example`) to keep the analysis fast
+  and avoid unnecessary LLM cost.
+- spaCy and Playwright are optional *fallbacks*: if they are not installed,
+  or the language model is not downloaded, the system keeps working with
+  the remaining signals (TF-IDF, BM25, n-grams, dates, links).
+- The interface and the generated summaries are in English, but the sources
+  being traced can be in any language: discovery, similarity and entity
+  extraction are configured to handle multilingual coverage.

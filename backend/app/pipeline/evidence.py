@@ -1,6 +1,6 @@
-"""Construye la evidencia que se le entrega al LLM para el resumen final,
-y un resumen alternativo por reglas (sin LLM) para cuando no hay
-OPENROUTER_API_KEY configurada, de modo que el producto siga siendo útil."""
+"""Builds the evidence handed to the LLM for the final summary, plus a
+rule-based fallback summary (no LLM) for when OPENROUTER_API_KEY is not
+configured, so the product stays useful either way."""
 
 from __future__ import annotations
 
@@ -8,14 +8,14 @@ from app.llm.types import EvidenceItem
 from app.models.models import Article, ArticleRelation
 
 ROLE_BY_RELATION = {
-    "confirmation": "confirma",
-    "developing": "desarrollo no confirmado",
-    "correction": "corrige",
-    "reaction": "reacciona",
-    "update": "actualiza",
-    "republication": "republica",
-    "cites": "cita",
-    "same_story": "misma historia",
+    "confirmation": "confirms",
+    "developing": "unconfirmed development",
+    "correction": "corrects",
+    "reaction": "reacts",
+    "update": "updates",
+    "republication": "republishes",
+    "cites": "cites",
+    "same_story": "same story",
 }
 
 
@@ -24,11 +24,11 @@ def build_evidence(
 ) -> list[EvidenceItem]:
     role_by_article: dict[str, str] = {}
     for rel in relations:
-        role_by_article[rel.target_article_id] = ROLE_BY_RELATION.get(rel.relation.value, "relacionado")
+        role_by_article[rel.target_article_id] = ROLE_BY_RELATION.get(rel.relation.value, "related")
 
     items: list[EvidenceItem] = []
     for article in sorted(articles, key=lambda a: a.published_at or a.created_at):
-        role = "origen" if article.is_origin else role_by_article.get(article.id, "relacionado")
+        role = "origin" if article.is_origin else role_by_article.get(article.id, "related")
         items.append(
             EvidenceItem(
                 source=f"{article.domain}" + (f" ({article.source_handle})" if article.source_handle else ""),
@@ -47,47 +47,47 @@ def rule_based_summary(
     divergence_count: int,
     llm_configured: bool = False,
 ) -> str:
-    """Resumen extractivo simple, sin LLM, usado cuando no hay API key
-    configurada (VeriGraph.md: el resumen debe poder generarse igual, solo
-    que sin la profundidad semántica del LLM)."""
+    """Simple extractive summary, without an LLM, used when no API key is
+    configured (VeriGraph.md: the summary must still be produced, only
+    without the semantic depth of the LLM)."""
     if not articles:
-        return "No se encontraron fuentes suficientes para reconstruir esta historia."
+        return "Not enough sources were found to reconstruct this story."
 
     ordered = sorted(articles, key=lambda a: a.published_at or a.created_at)
     origin = next((a for a in ordered if a.is_origin), ordered[0])
     pub = origin.published_at
-    # Muchas fuentes solo dan la fecha; el parser completa la hora faltante
-    # con medianoche UTC, que no es una hora real.
+    # Many sources only provide the date; the parser fills the missing time
+    # with midnight UTC, which is not a real clock time.
     has_time = pub and not (pub.hour == 0 and pub.minute == 0 and pub.second == 0)
-    origin_time = pub.strftime("%H:%M") if has_time else "hora desconocida"
+    origin_time = pub.strftime("%H:%M") if has_time else "unknown time"
 
     parts = [
-        f"Se encontraron {len(articles)} publicaciones relacionadas con esta historia.",
-        f'La primera versión localizada fue "{origin.title or origin.url}" '
+        f"{len(articles)} publications related to this story were found.",
+        f'The earliest version located was "{origin.title or origin.url}" '
         f"({origin.domain}, {origin_time}).",
     ]
 
     correction_edges = [r for r in relations if r.relation.value == "correction"]
     if correction_edges:
         parts.append(
-            f"Se detectaron {len(correction_edges)} correcciones formales sobre versiones anteriores."
+            f"{len(correction_edges)} formal corrections to earlier versions were detected."
         )
     if divergence_count:
         parts.append(
-            f"El sistema identificó {divergence_count} divergencia(s) entre las afirmaciones de "
-            "distintas fuentes; revisa cada nodo para ver el detalle."
+            f"The system identified {divergence_count} divergence(s) between the claims of "
+            "different sources; inspect each node for the details."
         )
     else:
-        parts.append("No se identificaron contradicciones claras entre las fuentes analizadas.")
+        parts.append("No clear contradictions were identified between the analysed sources.")
 
     if llm_configured:
         parts.append(
-            "No se pudo generar el resumen semántico con el modelo de lenguaje en este intento "
-            "(el servicio no respondió); este es un resumen básico generado sin LLM."
+            "The semantic summary could not be generated with the language model on this attempt "
+            "(the service did not respond); this is a basic summary produced without an LLM."
         )
     else:
         parts.append(
-            "Configura tu OPENROUTER_API_KEY en el archivo .env para obtener un resumen semántico "
-            "más detallado generado por el modelo de lenguaje."
+            "Set your OPENROUTER_API_KEY in the .env file to get a more detailed semantic summary "
+            "generated by the language model."
         )
     return " ".join(parts)

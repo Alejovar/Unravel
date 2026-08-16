@@ -17,10 +17,10 @@ def utcnow() -> datetime:
 
 
 def pg_enum(enum_cls: type[enum.Enum], name: str) -> SAEnum:
-    """SQLAlchemy manda por defecto el *nombre* del miembro del Enum de
-    Python (p.ej. "QUEUED"), no su *valor* ("queued"). Nuestros tipos ENUM
-    de Postgres (ver alembic/versions/0001_initial.py) usan los valores en
-    minúscula, así que forzamos `values_callable` para que coincidan."""
+    """By default SQLAlchemy sends the *name* of the Python Enum member
+    (e.g. "QUEUED"), not its *value* ("queued"). Our Postgres ENUM types
+    (see alembic/versions/0001_initial.py) use the lowercase values, so we
+    force `values_callable` to make them match."""
     return SAEnum(enum_cls, name=name, values_callable=lambda obj: [e.value for e in obj])
 
 

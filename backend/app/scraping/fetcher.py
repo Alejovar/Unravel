@@ -1,4 +1,4 @@
-"""Descarga de páginas vía httpx. Sin LLM: es la primera etapa del pipeline."""
+"""Page download through httpx. No LLM: this is the first pipeline stage."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ USER_AGENT = (
 DEFAULT_HEADERS = {
     "User-Agent": USER_AGENT,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "es-419,es;q=0.9,en;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
 }
 
 TIMEOUT = httpx.Timeout(15.0, connect=10.0)
@@ -35,7 +35,7 @@ class FetchResult:
 
     @property
     def looks_incomplete(self) -> bool:
-        """Heurística simple para detectar páginas renderizadas por JS (poco HTML útil)."""
+        """Simple heuristic to detect JS-rendered pages (little useful HTML)."""
         if not self.html:
             return True
         stripped = self.html.strip()
@@ -43,9 +43,9 @@ class FetchResult:
 
 
 async def fetch(url: str) -> FetchResult:
-    """Descarga una URL con httpx. No lanza excepción en errores HTTP/red: los
-    encapsula en el resultado para que el pipeline decida el siguiente paso
-    (por ejemplo, recurrir al fallback de Playwright)."""
+    """Downloads a URL with httpx. It does not raise on HTTP/network
+    errors: they are wrapped in the result so the pipeline can decide the
+    next step (for example, falling back to Playwright)."""
     try:
         async with httpx.AsyncClient(
             headers=DEFAULT_HEADERS,

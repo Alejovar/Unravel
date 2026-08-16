@@ -6,6 +6,6 @@ from app.llm.openrouter import OpenRouterProvider
 
 @lru_cache
 def get_llm_provider() -> LLMProvider:
-    """Único proveedor soportado hoy: OpenRouter. Cambiar de proveedor en
-    el futuro solo requiere implementar LLMProvider y devolverlo aquí."""
+    """The only provider supported today: OpenRouter. Switching provider
+    later only requires implementing LLMProvider and returning it here."""
     return OpenRouterProvider()

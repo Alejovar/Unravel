@@ -1,10 +1,10 @@
-"""Heurística que traduce las señales sin-LLM + con-LLM en una etiqueta de
-relación del taxonomy del proyecto: confirmation, developing, correction,
-reaction, update, republication, cites, same_story.
+"""Heuristic that turns the LLM-free + LLM signals into one relation label
+from the project taxonomy: confirmation, developing, correction, reaction,
+update, republication, cites, same_story.
 
-Esto es intencionalmente una heurística documentada, no una verdad
-absoluta: el MVP prioriza mostrar el razonamiento (kind observado/inferido,
-confidence, explicación) antes que fingir precisión perfecta.
+This is deliberately a documented heuristic, not absolute truth: the MVP
+prioritises showing its reasoning (observed/inferred kind, confidence,
+explanation) over pretending to be perfectly accurate.
 """
 
 from __future__ import annotations
@@ -51,8 +51,9 @@ def classify_relation(data: ClassificationInput) -> str:
 
 
 def status_for_target(relation: str, current_status: str) -> str:
-    """Determina el estado visual del nodo `target` de una relación,
-    respetando que `corrected` y `confirmed` no se degraden accidentalmente."""
+    """Determines the visual status of the `target` node of a relation,
+    making sure `corrected` and `confirmed` are not accidentally
+    downgraded."""
     if current_status == "corrected":
         return current_status
     if relation == "correction":

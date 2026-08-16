@@ -10,18 +10,18 @@ export function HelpButton() {
     <div className="fixed bottom-6 right-6 z-20">
       {open && (
         <div className="mb-3 w-72 rounded-2xl border border-unravel-border bg-white p-4 text-xs leading-relaxed text-unravel-inkSoft shadow-panel">
-          <p className="mb-2 font-bold text-unravel-ink">¿Cómo leer este grafo?</p>
+          <p className="mb-2 font-bold text-unravel-ink">How do I read this graph?</p>
           <p>
-            Cada nodo es una publicación. La posición horizontal indica cuándo apareció. Las líneas
-            sólidas son relaciones observadas (citas, enlaces directos); las punteadas son inferidas por
-            similitud. Unravel no decide qué es verdadero — te da el contexto para que tú lo hagas.
+            Each node is a publication. Its horizontal position shows when it appeared. Solid lines are
+            observed relations (citations, direct links); dashed lines are inferred from similarity.
+            Unravel does not decide what is true — it gives you the context so you can decide.
           </p>
         </div>
       )}
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex h-11 w-11 items-center justify-center rounded-full bg-unravel-ink text-white shadow-panel transition hover:bg-unravel-teal"
-        aria-label="Ayuda"
+        aria-label="Help"
       >
         {open ? <CloseIcon className="h-4 w-4" /> : <HelpIcon className="h-4 w-4" />}
       </button>

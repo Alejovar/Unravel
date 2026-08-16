@@ -1,9 +1,9 @@
-"""Motor de búsqueda vía API sin necesidad de API key: DuckDuckGo HTML.
+"""Search engine that needs no API key: DuckDuckGo HTML.
 
-Esto implementa el rol de "Search API" descrito en la arquitectura sin
-requerir que el usuario configure una clave adicional además de la de
-OpenRouter. Si en el futuro se quiere usar Bing/Google/Serper, basta con
-añadir otra implementación con la misma firma `search(query, max_results)`.
+This fills the "Search API" role described in the architecture without
+requiring the user to configure any key beyond the OpenRouter one. To use
+Bing/Google/Serper later, it is enough to add another implementation with
+the same `search(query, max_results)` signature.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ HEADERS = {
 
 
 def _clean_result_url(href: str) -> str | None:
-    """DuckDuckGo HTML envuelve los links en `//duckduckgo.com/l/?uddg=<url>`."""
+    """DuckDuckGo HTML wraps links as `//duckduckgo.com/l/?uddg=<url>`."""
     if href.startswith("//duckduckgo.com/l/") or "duckduckgo.com/l/" in href:
         parsed = urlparse(href if href.startswith("http") else f"https:{href}")
         qs = parse_qs(parsed.query)

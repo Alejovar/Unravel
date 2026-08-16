@@ -1,5 +1,5 @@
-"""Cliente para GDELT DOC 2.0 API — búsqueda de noticias publicadas en
-múltiples medios. Es un endpoint público, no requiere API key."""
+"""Client for the GDELT DOC 2.0 API — search across news published by many
+outlets. It is a public endpoint and requires no API key."""
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
-"""Convierte las filas de la base de datos de un análisis en el JSON de
-grafo + timeline que consume el frontend (Cytoscape.js)."""
+"""Turns the database rows of an analysis into the graph + timeline JSON
+consumed by the frontend (Cytoscape.js)."""
 
 from __future__ import annotations
 
@@ -57,8 +57,8 @@ def build_graph_response(analysis: Analysis) -> GraphResponse:
         origin_desc = ""
         if origin_article:
             pub = origin_article.published_at
-            # Muchas fuentes solo dan la fecha; el parser completa la hora
-            # faltante con medianoche UTC, que no es una hora real.
+            # Many sources only provide the date; the parser fills the
+            # missing time with midnight UTC, which is not a real time.
             has_time = pub and not (pub.hour == 0 and pub.minute == 0 and pub.second == 0)
             when = pub.strftime("%H:%M") if has_time else ""
             origin_desc = (
@@ -90,7 +90,7 @@ def build_graph_response(analysis: Analysis) -> GraphResponse:
                 icon="latest",
                 label="LATEST STATE",
                 title=summary.latest_state_label or "—",
-                description="Estado más reciente de la cobertura encontrada.",
+                description="Most recent state of the coverage found.",
             ),
         ]
 

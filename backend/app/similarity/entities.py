@@ -1,8 +1,13 @@
-"""Extracción de entidades (VeriGraph.md sección 20).
+"""Entity extraction (VeriGraph.md section 20).
 
-Usa spaCy si el modelo `es_core_news_sm` está instalado. Si no lo está (o
-falla la carga), cae a un extractor por reglas basado en mayúsculas, para
-que el sistema nunca dependa de manera dura de este paso.
+It uses spaCy when one of the small news models is installed. If none of
+them is available (or loading fails) it falls back to a rule-based
+extractor driven by capitalisation, so the system never hard-depends on
+this step.
+
+Two models are attempted: the English one first, then the Spanish one,
+because the sources being traced are frequently published in either
+language.
 """
 
 from __future__ import annotations
@@ -17,8 +22,17 @@ _nlp = None
 _load_lock = threading.Lock()
 _load_attempted = False
 
+SPACY_MODELS = ("en_core_web_sm", "es_core_news_sm")
+
 CAPITALIZED_RE = re.compile(r"\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){0,3})\b")
-SENTENCE_START_WORDS = {"El", "La", "Los", "Las", "Un", "Una", "Sin", "Pero", "Aunque"}
+
+# Words that commonly open a sentence and would otherwise be mistaken for a
+# proper noun by the capitalisation heuristic. Kept bilingual for the same
+# reason as the model list above.
+SENTENCE_START_WORDS = {
+    "The", "A", "An", "This", "That", "But", "However", "Although", "After",
+    "El", "La", "Los", "Las", "Un", "Una", "Sin", "Pero", "Aunque",
+}
 
 
 def _load_spacy_model():
@@ -31,14 +45,22 @@ def _load_spacy_model():
         _load_attempted = True
         try:
             import spacy
-
-            _nlp = spacy.load("es_core_news_sm")
-            logger.info("Modelo spaCy es_core_news_sm cargado")
         except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "spaCy no disponible (%s); usando extractor de entidades por reglas", exc
-            )
-            _nlp = None
+            logger.warning("spaCy unavailable (%s); using rule-based entity extractor", exc)
+            return _nlp
+
+        for model_name in SPACY_MODELS:
+            try:
+                _nlp = spacy.load(model_name)
+                logger.info("spaCy model %s loaded", model_name)
+                return _nlp
+            except Exception as exc:  # noqa: BLE001
+                logger.info("spaCy model %s not available (%s)", model_name, exc)
+
+        logger.warning(
+            "No spaCy model available (%s); using rule-based entity extractor",
+            ", ".join(SPACY_MODELS),
+        )
     return _nlp
 
 
@@ -71,7 +93,7 @@ def extract_entities(text: str, max_entities: int = 25) -> list[str]:
         entities: list[str] = []
         seen: set[str] = set()
         for ent in doc.ents:
-            if ent.label_ in {"PER", "ORG", "LOC", "GPE", "MISC"}:
+            if ent.label_ in {"PER", "PERSON", "ORG", "LOC", "GPE", "MISC"}:
                 key = ent.text.lower().strip()
                 if key and key not in seen:
                     seen.add(key)
@@ -80,7 +102,7 @@ def extract_entities(text: str, max_entities: int = 25) -> list[str]:
                 break
         return entities
     except Exception as exc:  # noqa: BLE001
-        logger.warning("Fallo extrayendo entidades con spaCy: %s", exc)
+        logger.warning("Entity extraction with spaCy failed: %s", exc)
         return _fallback_extract(text, max_entities)
 
 

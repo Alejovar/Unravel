@@ -1,5 +1,5 @@
-"""Detección de fragmentos de texto compartidos vía n-gramas
-(VeriGraph.md sección 19). Útil para republicaciones y copias parciales."""
+"""Detection of shared text fragments through n-grams (VeriGraph.md
+section 19). Useful for republications and partial copies."""
 
 from __future__ import annotations
 
@@ -19,9 +19,9 @@ def ngrams(tokens: list[str], n: int = 5) -> set[tuple[str, ...]]:
 
 
 def phrase_overlap(text_a: str, text_b: str, n: int = 5) -> float:
-    """Fracción de n-gramas de `text_a` que también aparecen en `text_b`
-    (Jaccard sobre el conjunto más pequeño para no penalizar textos largos
-    frente a resúmenes cortos)."""
+    """Fraction of `text_a` n-grams that also appear in `text_b` (Jaccard
+    over the smaller set, so long texts are not penalised against short
+    summaries)."""
     ngrams_a = ngrams(_tokenize(text_a), n)
     ngrams_b = ngrams(_tokenize(text_b), n)
     if not ngrams_a or not ngrams_b:

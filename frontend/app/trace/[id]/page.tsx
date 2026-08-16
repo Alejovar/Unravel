@@ -39,7 +39,7 @@ export default function TracePage() {
         }
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : "No se pudo obtener el análisis.");
+        setError(err instanceof ApiError ? err.message : "Could not fetch the analysis.");
         if (timerRef.current) clearInterval(timerRef.current);
       }
     }
@@ -65,7 +65,7 @@ export default function TracePage() {
         <Logo />
         <p className="text-sm text-unravel-red">{error}</p>
         <Link href="/" className="text-sm font-semibold text-unravel-teal hover:underline">
-          Volver al inicio
+          Back to home
         </Link>
       </div>
     );
@@ -86,10 +86,10 @@ export default function TracePage() {
         <TopBar queryInput={queryInput} stats={null} />
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="max-w-md text-sm text-unravel-red">
-            {result.error || "No se pudo completar el análisis de esta historia."}
+            {result.error || "This story could not be analysed."}
           </p>
           <Link href="/" className="text-sm font-semibold text-unravel-teal hover:underline">
-            Intentar con otra historia
+            Try another story
           </Link>
         </div>
       </div>
@@ -109,7 +109,7 @@ export default function TracePage() {
         <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-unravel-inkSoft">
-              Tracing: <span className="font-bold text-unravel-ink">{queryInput || "historia"}</span>
+              Tracing: <span className="font-bold text-unravel-ink">{queryInput || "story"}</span>
               <span className="mx-2 text-unravel-border">·</span>
               Click any node to inspect
             </p>
@@ -178,7 +178,7 @@ function TopBar({
             {stats.sources} sources · {stats.edges} edges traced
           </>
         ) : (
-          "Analizando…"
+          "Analysing…"
         )}
       </div>
     </header>

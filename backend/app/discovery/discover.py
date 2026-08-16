@@ -1,6 +1,6 @@
-"""Orquesta el descubrimiento de fuentes candidatas: combina GDELT, RSS,
-búsqueda web y los hyperlinks del artículo semilla. Discovery iterativo
-acotado por MAX_DEPTH / MAX_SOURCES (VeriGraph.md secciones 12-13).
+"""Orchestrates the discovery of candidate sources: it combines GDELT,
+RSS, web search and the hyperlinks of the seed article. Iterative discovery
+bounded by MAX_DEPTH / MAX_SOURCES (VeriGraph.md sections 12-13).
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from app.scraping.pipeline import is_safe_url
 
 logger = logging.getLogger(__name__)
 
-# Dominios de agregadores/redes sociales que no aportan como "fuente" propia.
+# Aggregator/social network domains that do not count as a source of their own.
 SKIP_DOMAINS = {
     "twitter.com", "x.com", "facebook.com", "instagram.com", "t.co",
     "youtube.com", "tiktok.com", "reddit.com", "news.google.com",
@@ -42,8 +42,8 @@ def _is_useful(url: str, seed_domain: str) -> bool:
 
 
 async def discover_candidates(seed: ExtractedArticle) -> list[CandidateSource]:
-    """Primera ronda: consultas generadas desde el artículo semilla contra
-    GDELT + RSS + búsqueda, más los hyperlinks explícitos del artículo."""
+    """First round: queries generated from the seed article against GDELT
+    + RSS + search, plus the article's explicit hyperlinks."""
     settings = get_settings()
     queries = build_queries(seed.title, seed.text)
     seed_domain = _domain(seed.canonical_url)
@@ -65,7 +65,7 @@ async def discover_candidates(seed: ExtractedArticle) -> list[CandidateSource]:
             if _is_useful(candidate.url, seed_domain) and candidate.url not in candidates:
                 candidates[candidate.url] = candidate
 
-    # Hyperlinks explícitos citados por el propio artículo semilla.
+    # Explicit hyperlinks cited by the seed article itself.
     for link in seed.links:
         if _is_useful(link, seed_domain) and link not in candidates:
             candidates[link] = CandidateSource(url=link, discovered_via="link")
@@ -77,9 +77,9 @@ async def discover_candidates(seed: ExtractedArticle) -> list[CandidateSource]:
 def discover_second_round(
     known_urls: set[str], newly_found_links: list[str], seed_domain: str, budget: int
 ) -> list[CandidateSource]:
-    """Segunda ronda de discovery: sigue enlaces citados por los artículos
-    ya encontrados en la primera ronda (no vuelve a llamar a los motores de
-    búsqueda, solo expande por citación directa)."""
+    """Second discovery round: follows links cited by the articles already
+    found in the first round (it does not call the search engines again, it
+    only expands through direct citation)."""
     out: list[CandidateSource] = []
     for link in newly_found_links:
         if len(out) >= budget:

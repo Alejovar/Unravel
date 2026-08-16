@@ -1,6 +1,6 @@
-"""Deduplicación: canonical URL, hash de contenido y similitud textual.
+"""Deduplication: canonical URL, content hash and textual similarity.
 
-Ver VeriGraph.md sección 14.
+See VeriGraph.md section 14.
 """
 
 from __future__ import annotations
@@ -26,9 +26,9 @@ def _jaccard(a: str, b: str) -> float:
 def dedupe_articles(
     articles: list[ExtractedArticle], near_dup_threshold: float = 0.9
 ) -> list[ExtractedArticle]:
-    """Colapsa artículos con la misma canonical_url, el mismo hash de
-    contenido, o texto casi idéntico (posible republicación exacta del
-    mismo boletín)."""
+    """Collapses articles sharing the same canonical_url, the same content
+    hash, or nearly identical text (a likely verbatim republication of the
+    same wire copy)."""
     seen_urls: set[str] = set()
     seen_hashes: set[str] = set()
     kept: list[ExtractedArticle] = []

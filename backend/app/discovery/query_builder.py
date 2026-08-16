@@ -1,17 +1,26 @@
-"""Genera consultas de búsqueda a partir del artículo semilla, sin usar LLM.
+"""Builds search queries from the seed article, without using an LLM.
 
-Ver VeriGraph.md sección 11: título completo, título normalizado, entidades
-principales + tema, y frases distintivas tomadas del cuerpo del texto.
+See VeriGraph.md section 11: full title, normalised title, main entities +
+topic, and distinctive phrases taken from the body text.
 """
 
 from __future__ import annotations
 
 import re
 
-STOPWORDS_ES = {
+# The product interface is in English, but the sources it traces are not:
+# news coverage of the same event is routinely published in several
+# languages. The stopword list therefore covers English and Spanish so that
+# query normalisation works on both.
+STOPWORDS = {
+    # English
+    "the", "a", "an", "of", "in", "on", "at", "and", "or", "to", "for",
+    "with", "by", "from", "is", "was", "were", "be", "as", "that", "after",
+    "over", "into", "its", "his", "her", "their",
+    # Spanish
     "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "al",
     "y", "o", "que", "en", "por", "para", "con", "su", "sus", "es", "fue",
-    "ser", "se", "a", "no", "más", "sobre", "como", "entre", "tras", "según",
+    "ser", "se", "a", "no", "mas", "sobre", "como", "entre", "tras", "segun",
 }
 
 WORD_RE = re.compile(r"[A-Za-zÀ-ÿ0-9]{3,}")
@@ -19,13 +28,13 @@ WORD_RE = re.compile(r"[A-Za-zÀ-ÿ0-9]{3,}")
 
 def normalize_title(title: str) -> str:
     tokens = WORD_RE.findall(title.lower())
-    tokens = [t for t in tokens if t not in STOPWORDS_ES]
+    tokens = [t for t in tokens if t not in STOPWORDS]
     return " ".join(tokens)
 
 
 def extract_distinctive_phrases(text: str, max_phrases: int = 3, phrase_len: int = 6) -> list[str]:
-    """Toma frases de `phrase_len` palabras que probablemente sean únicas
-    (poco comunes) para usarlas como búsqueda de "huella textual"."""
+    """Takes phrases of `phrase_len` words that are likely to be unique
+    (uncommon) so they can be used as a "textual fingerprint" search."""
     sentences = re.split(r"(?<=[.!?])\s+", text)
     phrases: list[str] = []
     for sentence in sentences:
@@ -45,7 +54,7 @@ def build_queries(title: str, text: str, max_queries: int = 4) -> list[str]:
         if normalized and normalized != title.strip().lower():
             queries.append(normalized)
     queries.extend(extract_distinctive_phrases(text, max_phrases=max_queries - len(queries)))
-    # Deduplicar preservando orden
+    # Deduplicate while preserving order
     seen: set[str] = set()
     unique: list[str] = []
     for q in queries:

@@ -32,7 +32,7 @@ def create_analysis(payload: AnalysisCreateRequest, db: Session = Depends(get_db
 def get_analysis(analysis_id: str, db: Session = Depends(get_db)):
     analysis = db.get(Analysis, analysis_id)
     if analysis is None:
-        raise HTTPException(status_code=404, detail="Análisis no encontrado")
+        raise HTTPException(status_code=404, detail="Analysis not found")
 
     graph = build_graph_response(analysis) if analysis.status == AnalysisStatus.DONE else None
 

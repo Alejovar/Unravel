@@ -1,8 +1,8 @@
-"""Implementación de LLMProvider usando OpenRouter.
+"""LLMProvider implementation backed by OpenRouter.
 
-Es el único proveedor de modelo de lenguaje del proyecto. Usa un solo
-modelo gratuito (":free") configurable vía OPENROUTER_MODEL, para que el
-usuario solo tenga que pegar una API key en `.env` y nada más.
+It is the project's only language model provider. It uses a single free
+model (":free") configurable through OPENROUTER_MODEL, so the user only
+has to paste an API key into `.env` and nothing else.
 """
 
 from __future__ import annotations
@@ -34,8 +34,8 @@ JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
 def _extract_json(raw: str) -> dict:
-    """Los modelos gratuitos a veces envuelven el JSON en texto o markdown.
-    Esta función intenta rescatar el primer objeto JSON balanceado."""
+    """Free models sometimes wrap the JSON in prose or markdown. This
+    function tries to rescue the first balanced JSON object."""
     raw = raw.strip()
     raw = re.sub(r"^```(?:json)?", "", raw).strip()
     raw = re.sub(r"```$", "", raw).strip()
@@ -51,7 +51,7 @@ def _extract_json(raw: str) -> dict:
         except json.JSONDecodeError:
             pass
 
-    logger.warning("No se pudo parsear JSON de la respuesta del LLM: %.200s", raw)
+    logger.warning("Could not parse JSON from the LLM response: %.200s", raw)
     return {}
 
 
@@ -62,8 +62,8 @@ class OpenRouterProvider(LLMProvider):
     def _require_key(self) -> None:
         if not self.settings.llm_configured:
             raise LLMNotConfiguredError(
-                "OPENROUTER_API_KEY no está configurada. Agrégala a tu archivo .env "
-                "(ver .env.example) para habilitar el motor de análisis semántico."
+                "OPENROUTER_API_KEY is not configured. Add it to your .env file "
+                "(see .env.example) to enable the semantic analysis engine."
             )
 
     @retry(
@@ -99,7 +99,7 @@ class OpenRouterProvider(LLMProvider):
         try:
             return data["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as exc:
-            raise ValueError(f"Respuesta inesperada de OpenRouter: {data}") from exc
+            raise ValueError(f"Unexpected response from OpenRouter: {data}") from exc
 
     async def extract_claims(self, article_text: str, article_title: str) -> list[ExtractedClaim]:
         content = await self._chat(
@@ -155,10 +155,10 @@ class OpenRouterProvider(LLMProvider):
     async def summarize(self, evidence: list[EvidenceItem]) -> str:
         lines = []
         for i, item in enumerate(evidence, start=1):
-            claims_txt = "; ".join(item.claims) if item.claims else "sin afirmaciones extraídas"
+            claims_txt = "; ".join(item.claims) if item.claims else "no claims extracted"
             lines.append(
-                f"{i}. [{item.role or 'fuente'}] {item.source} "
-                f"({item.published_at or 'fecha desconocida'}): \"{item.headline}\" — {claims_txt}"
+                f"{i}. [{item.role or 'source'}] {item.source} "
+                f"({item.published_at or 'unknown date'}): \"{item.headline}\" — {claims_txt}"
             )
         evidence_block = "\n".join(lines)
         content = await self._chat(

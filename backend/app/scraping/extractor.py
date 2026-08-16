@@ -1,8 +1,8 @@
-"""Extracción de título/autor/fecha/texto/links a partir de HTML.
+"""Extraction of title/author/date/text/links out of HTML.
 
-Trafilatura hace el trabajo pesado (contenido + metadatos). BeautifulSoup
-se usa como respaldo y para extraer TODOS los hyperlinks salientes del
-artículo, que el motor de discovery usa como evidencia de citas.
+Trafilatura does the heavy lifting (content + metadata). BeautifulSoup is
+used as a fallback and to extract ALL outbound hyperlinks of the article,
+which the discovery engine uses as citation evidence.
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ from dateutil import parser as dateparser
 
 logger = logging.getLogger(__name__)
 
-# Títulos típicos de páginas de bloqueo/verificación (WAF, Cloudflare, paywall)
-# que a veces responden con status 200 pero no son el artículo real.
+# Typical titles of block/challenge pages (WAF, Cloudflare, paywall) that
+# sometimes answer with status 200 but are not the real article.
 BLOCK_PAGE_TITLES = (
     "access denied",
     "attention required",
@@ -130,7 +130,7 @@ def extract(html: str, url: str) -> ExtractedArticle | None:
         title = soup.title.get_text(strip=True)
 
     if not text:
-        # Respaldo mínimo si trafilatura no logró extraer contenido.
+        # Minimal fallback when trafilatura could not extract any content.
         paragraphs = [p.get_text(" ", strip=True) for p in soup.find_all("p")]
         text = "\n".join(p for p in paragraphs if len(p) > 40)
 
@@ -158,7 +158,7 @@ def extract(html: str, url: str) -> ExtractedArticle | None:
         return None
 
     if title.strip().lower() in BLOCK_PAGE_TITLES:
-        logger.warning("Descartando %s: título de página de bloqueo (%r)", url, title)
+        logger.warning("Discarding %s: block page title (%r)", url, title)
         return None
 
     return ExtractedArticle(

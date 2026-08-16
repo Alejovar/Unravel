@@ -1,11 +1,11 @@
 /**
- * Muchas fuentes solo publican la fecha en sus metadatos (sin hora), y el
- * parser de fechas del backend completa la hora faltante con medianoche
- * UTC. Convertida a la zona horaria local del navegador, esa medianoche
- * fabricada aparece como una hora "real" pero falsa (ej. 18:00 en México)
- * — y como pasa con muchos artículos, casi todos terminan mostrando la
- * misma hora. Tratamos la medianoche UTC exacta como "hora desconocida"
- * en vez de mostrarla como si fuera precisa.
+ * Many sources only publish the date in their metadata (no clock time), and
+ * the backend date parser fills the missing time with midnight UTC.
+ * Converted to the browser's local timezone, that fabricated midnight shows
+ * up as a "real" but bogus time (e.g. 18:00 in Mexico) — and because it
+ * happens for many articles, almost all of them end up displaying the same
+ * time. We treat exact UTC midnight as "unknown time" instead of rendering
+ * it as if it were precise.
  */
 export function hasKnownTime(iso: string | null): boolean {
   if (!iso) return false;

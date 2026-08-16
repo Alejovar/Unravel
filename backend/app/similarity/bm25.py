@@ -1,6 +1,6 @@
-"""Ranking BM25 (VeriGraph.md sección 18): útil para priorizar qué fuentes
-candidatas procesar primero/con más presupuesto antes de aplicar filtros
-más costosos (TF-IDF pairwise, entidades, LLM)."""
+"""BM25 ranking (VeriGraph.md section 18): useful to prioritise which
+candidate sources to process first, or with a larger budget, before
+applying more expensive filters (pairwise TF-IDF, entities, LLM)."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ def _tokenize(text: str) -> list[str]:
 
 
 def rank_by_relevance(query: str, documents: list[str]) -> list[float]:
-    """Devuelve un score BM25 por documento respecto a `query`."""
+    """Returns one BM25 score per document with respect to `query`."""
     if not documents:
         return []
     tokenized_docs = [_tokenize(doc) for doc in documents]

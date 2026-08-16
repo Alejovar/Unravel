@@ -14,9 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# Modelo de spaCy en español para extracción de entidades.
-# Si falla la descarga (sin red en build), el sistema sigue funcionando:
-# app/similarity/entities.py cae a un extractor por reglas.
+# spaCy models for entity extraction. English first, Spanish kept because
+# the tool traces coverage published in either language.
+# If the download fails (no network at build time) the system still works:
+# app/similarity/entities.py falls back to a rule-based extractor.
+RUN python -m spacy download en_core_web_sm || true
 RUN python -m spacy download es_core_news_sm || true
 
 COPY . .

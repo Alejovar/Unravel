@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Configuración central de Unravel, cargada desde variables de entorno."""
+    """Central Unravel configuration, loaded from environment variables."""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # --- Queue ---
     redis_url: str = "redis://localhost:6379/0"
 
-    # --- LLM (OpenRouter — único proveedor soportado) ---
+    # --- LLM (OpenRouter — the only supported provider) ---
     openrouter_api_key: str = ""
     openrouter_model: str = "google/gemma-4-26b-a4b-it:free"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"

@@ -12,7 +12,7 @@ settings = get_settings()
 
 app = FastAPI(
     title="Unravel API",
-    description="News Traceability Graph — motor de rastreo y análisis.",
+    description="News Traceability Graph — tracing and analysis engine.",
     version="0.1.0",
 )
 

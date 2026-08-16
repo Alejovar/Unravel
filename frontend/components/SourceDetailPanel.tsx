@@ -14,8 +14,8 @@ function formatDate(iso: string | null): { date: string; time: string } {
   if (!iso) return { date: "—", time: "—" };
   const d = new Date(iso);
   return {
-    date: d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
-    time: hasKnownTime(iso) ? d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false }) : "—",
+    date: d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+    time: hasKnownTime(iso) ? d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false }) : "—",
   };
 }
 
@@ -26,10 +26,10 @@ function formatCount(n: number | null): string {
 }
 
 const PROVENANCE_TEXT: Record<string, string> = {
-  origin: "Primer origen — contenido publicado directamente sin revisión editorial previa detectada.",
-  confirmed: "Esta fuente respalda o reproduce la información de una publicación anterior.",
-  developing: "La información de esta fuente aún no ha sido confirmada por otras fuentes.",
-  corrected: "Esta publicación corrige formalmente una versión anterior de la historia.",
+  origin: "First origin — content published directly, with no prior editorial review detected.",
+  confirmed: "This source backs up or reproduces information from an earlier publication.",
+  developing: "The information in this source has not yet been confirmed by other sources.",
+  corrected: "This publication formally corrects an earlier version of the story.",
 };
 
 export function SourceDetailPanel({ node, onClose }: { node: GraphNode; onClose: () => void }) {
@@ -46,7 +46,7 @@ export function SourceDetailPanel({ node, onClose }: { node: GraphNode; onClose:
         <button
           onClick={onClose}
           className="rounded-full p-1 text-unravel-inkSoft transition hover:bg-unravel-mint hover:text-unravel-teal"
-          aria-label="Cerrar"
+          aria-label="Close"
         >
           <CloseIcon className="h-4 w-4" />
         </button>

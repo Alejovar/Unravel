@@ -1,88 +1,92 @@
-"""Plantillas de prompts para cada tarea semántica del motor de análisis.
+"""Prompt templates for each semantic task of the analysis engine.
 
-Todas piden explícitamente salida JSON estricta, porque el modelo gratuito
-de OpenRouter configurado puede no soportar "JSON mode" nativo — el parser
-en openrouter.py es tolerante a texto extra alrededor del JSON.
+All of them explicitly ask for strict JSON output, because the free
+OpenRouter model in use may not support native "JSON mode" — the parser in
+openrouter.py tolerates extra text around the JSON.
+
+Source articles may be written in any language; the prompts always ask for
+the answer in English so the product surface stays consistent.
 """
 
 EXTRACT_CLAIMS_SYSTEM = (
-    "Eres un asistente de verificación periodística. Tu única tarea es "
-    "extraer afirmaciones verificables (hechos, cifras, atribuciones) de un "
-    "artículo de noticias. No opines, no evalúes si son verdaderas o "
-    "falsas. Responde ÚNICAMENTE con JSON válido, sin texto adicional."
+    "You are a journalistic verification assistant. Your only task is to "
+    "extract verifiable claims (facts, figures, attributions) from a news "
+    "article. Do not give opinions and do not judge whether they are true "
+    "or false. Answer ONLY with valid JSON, with no extra text. Write the "
+    "output in English even if the article is in another language."
 )
 
-EXTRACT_CLAIMS_USER = """Título: {title}
+EXTRACT_CLAIMS_USER = """Title: {title}
 
-Texto del artículo:
+Article text:
 {text}
 
-Extrae hasta 5 afirmaciones verificables del artículo (hechos concretos,
-cifras, atribuciones a fuentes oficiales, etc.). Para cada una entrega:
-- "text": la afirmación tal como aparece o parafraseada de forma breve
-- "subject": de qué trata (p.ej. "personas evacuadas", "causa del incendio")
-- "value": el valor o dato concreto si existe (p.ej. "500", "ciberataque"),
-  o cadena vacía si no aplica
+Extract up to 5 verifiable claims from the article (concrete facts,
+figures, attributions to official sources, etc.). For each one provide:
+- "text": the claim as it appears, or briefly paraphrased
+- "subject": what it is about (e.g. "people evacuated", "cause of the fire")
+- "value": the concrete value or data point if there is one (e.g. "500",
+  "cyberattack"), or an empty string if not applicable
 
-Responde con este formato exacto (JSON, sin markdown, sin explicación):
+Answer with this exact format (JSON, no markdown, no explanation):
 {{"claims": [{{"text": "...", "subject": "...", "value": "..."}}]}}"""
 
 
 COMPARE_CLAIMS_SYSTEM = (
-    "Eres un asistente de verificación periodística. Comparas dos "
-    "afirmaciones de distintas fuentes sobre el mismo evento y clasificas "
-    "su relación. Responde ÚNICAMENTE con JSON válido."
+    "You are a journalistic verification assistant. You compare two claims "
+    "from different sources about the same event and classify their "
+    "relation. Answer ONLY with valid JSON, in English."
 )
 
-COMPARE_CLAIMS_USER = """Afirmación A: {claim_a}
+COMPARE_CLAIMS_USER = """Claim A: {claim_a}
 
-Afirmación B: {claim_b}
+Claim B: {claim_b}
 
-Clasifica la relación entre A y B con una de estas etiquetas:
-- "SUPPORTS": B confirma o refuerza A
-- "CONTRADICTS": B contradice A (cifras distintas, hechos incompatibles)
-- "RELATED": hablan del mismo tema pero no se puede determinar si
-  concuerdan o no
-- "INSUFFICIENT": no hay suficiente información para compararlas
+Classify the relation between A and B with one of these labels:
+- "SUPPORTS": B confirms or reinforces A
+- "CONTRADICTS": B contradicts A (different figures, incompatible facts)
+- "RELATED": they cover the same topic but it cannot be determined whether
+  they agree or not
+- "INSUFFICIENT": there is not enough information to compare them
 
-Responde con este formato exacto:
+Answer with this exact format:
 {{"relation": "SUPPORTS|CONTRADICTS|RELATED|INSUFFICIENT", "explanation": "...", "confidence": 0.0}}"""
 
 
 ANALYZE_CHANGE_SYSTEM = (
-    "Eres un asistente de alfabetización mediática. Analizas cómo cambió "
-    "una narrativa periodística entre una versión anterior y una más "
-    "reciente de la misma historia. Responde ÚNICAMENTE con JSON válido."
+    "You are a media literacy assistant. You analyse how a news narrative "
+    "changed between an earlier and a more recent version of the same "
+    "story. Answer ONLY with valid JSON, in English."
 )
 
-ANALYZE_CHANGE_USER = """Versión anterior:
+ANALYZE_CHANGE_USER = """Previous version:
 {previous}
 
-Versión actual:
+Current version:
 {current}
 
-¿Cambió la narrativa de forma relevante entre estas dos versiones? Por
-ejemplo: una hipótesis que se presenta como confirmada, un dato que se
-corrige, un hecho que se atenúa o se amplifica.
+Did the narrative change in a meaningful way between these two versions?
+For example: a hypothesis presented as confirmed, a figure that gets
+corrected, a fact that is played down or amplified.
 
-Responde con este formato exacto:
+Answer with this exact format:
 {{"changed": true|false, "explanation": "..."}}"""
 
 
 SUMMARIZE_SYSTEM = (
-    "Eres un asistente de alfabetización mediática e informacional. "
-    "Escribes resúmenes breves, neutrales y basados ÚNICAMENTE en la "
-    "evidencia que se te entrega. Nunca inventas fuentes ni afirmas si algo "
-    "es verdadero o falso: tu trabajo es explicar de dónde salió la "
-    "historia, cómo se propagó y qué cambió, no emitir un veredicto."
+    "You are a media and information literacy assistant. You write short, "
+    "neutral summaries based ONLY on the evidence you are given. You never "
+    "invent sources and never state whether something is true or false: "
+    "your job is to explain where the story came from, how it spread and "
+    "what changed, not to issue a verdict."
 )
 
-SUMMARIZE_USER = """Evidencia recopilada (ya verificada y ordenada por el sistema):
+SUMMARIZE_USER = """Collected evidence (already verified and ordered by the system):
 
 {evidence_block}
 
-Redacta un resumen de 4 a 6 oraciones en español que explique: cuándo y
-dónde parece haberse originado la historia, cómo se propagó entre las
-fuentes listadas, y qué contradicciones o correcciones relevantes existen
-(si las hay). No agregues información que no esté en la evidencia. No uses
-markdown, solo texto plano."""
+Write a 4 to 6 sentence summary in English explaining: when and where the
+story appears to have originated, how it spread across the listed sources,
+and what relevant contradictions or corrections exist (if any). Do not add
+information that is not in the evidence. Do not use markdown, plain text
+only."""

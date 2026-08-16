@@ -1,10 +1,12 @@
-"""Combina las señales sin LLM en un score de relevancia/relación entre
-artículos (VeriGraph.md secciones 22-25).
+"""Combines the LLM-free signals into a relevance/relation score between
+articles (VeriGraph.md sections 22-25).
 
-Distingue explícitamente:
-  - relación OBSERVADA: hay un hyperlink directo de un artículo a otro.
-  - relación INFERIDA: solo hay indicios (similitud alta), nunca se afirma
-    causalidad ("B copió a A"), solo relación posible con una confianza.
+It explicitly distinguishes:
+  - OBSERVED relation: there is a direct hyperlink from one article to the
+    other.
+  - INFERRED relation: there are only hints (high similarity); causality is
+    never claimed ("B copied A"), only a possible relation with a
+    confidence.
 """
 
 from __future__ import annotations
@@ -56,8 +58,9 @@ def _domain(url: str) -> str:
 
 
 def _link_evidence(a: ArticleLike, b: ArticleLike) -> str | None:
-    """Devuelve 'a_to_b', 'b_to_a' o None según haya un hyperlink explícito
-    de un artículo hacia el dominio/URL canónica del otro."""
+    """Returns 'a_to_b', 'b_to_a' or None depending on whether there is an
+    explicit hyperlink from one article to the other's canonical URL or
+    domain."""
     links_a = a.links or []
     links_b = b.links or []
     domain_b = _domain(b.canonical_url)
@@ -118,9 +121,9 @@ def score_pair(a: ArticleLike, b: ArticleLike, tfidf_sim: float, entity_overlap_
 
 
 def compute_candidates(articles: list[ArticleLike]) -> list[RelationCandidate]:
-    """Calcula candidatos de relación para todos los pares de `articles`.
-    Conserva un candidato si hay evidencia de enlace directo O si el score
-    combinado supera RELATED_THRESHOLD."""
+    """Computes relation candidates for every pair in `articles`. A
+    candidate is kept when there is direct link evidence OR when the
+    combined score is above RELATED_THRESHOLD."""
     from app.similarity.entities import entity_overlap as entity_overlap_fn
     from app.similarity.tfidf import similarity_matrix
 

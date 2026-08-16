@@ -1,4 +1,4 @@
-"""Descubrimiento vía feeds RSS de medios y agencias. Sin API key."""
+"""Discovery through RSS feeds of outlets and wire agencies. No API key."""
 
 from __future__ import annotations
 
@@ -12,15 +12,18 @@ from app.discovery.types import CandidateSource
 
 logger = logging.getLogger(__name__)
 
-# Feeds generales de agencias/medios ampliamente disponibles. Se pueden
-# ampliar sin tocar código (ver DISCOVERY_RSS_FEEDS en el futuro .env).
+# Broadly available general feeds from wire agencies and outlets. Feeds in
+# other languages are kept on purpose: the same event is often covered
+# first by a non-English outlet, and entries are matched by token overlap,
+# not by language. The list can be extended without touching code (see the
+# future DISCOVERY_RSS_FEEDS in .env).
 DEFAULT_FEEDS = [
-    "https://feeds.bbci.co.uk/mundo/rss.xml",
     "https://feeds.bbci.co.uk/news/rss.xml",
-    "https://www.eluniversal.com.mx/rss.xml",
-    "https://elpais.com/rss/elpais/portada.xml",
     "https://www.reuters.com/arc/outboundfeeds/rss/category/world/?outputType=xml",
     "https://feeds.npr.org/1001/rss.xml",
+    "https://feeds.bbci.co.uk/mundo/rss.xml",
+    "https://www.eluniversal.com.mx/rss.xml",
+    "https://elpais.com/rss/elpais/portada.xml",
 ]
 
 WORD_RE = re.compile(r"[A-Za-zÀ-ÿ0-9]{4,}")
@@ -36,12 +39,12 @@ async def _fetch_feed(client: httpx.AsyncClient, feed_url: str):
         response.raise_for_status()
         return feedparser.parse(response.content)
     except httpx.HTTPError as exc:
-        logger.info("RSS feed no disponible (%s): %s", feed_url, exc)
+        logger.info("RSS feed unavailable (%s): %s", feed_url, exc)
         return None
 
 
 async def search(query: str, feeds: list[str] | None = None, min_overlap: int = 2) -> list[CandidateSource]:
-    """Filtra entradas de los feeds cuyo título comparte tokens con `query`."""
+    """Keeps feed entries whose title shares tokens with `query`."""
     query_tokens = _tokenize(query)
     if not query_tokens:
         return []

@@ -1,7 +1,7 @@
-"""Pipeline de scraping: URL -> validar -> httpx -> trafilatura -> (fallback
-Playwright si el HTML se ve incompleto) -> artículo normalizado.
+"""Scraping pipeline: URL -> validate -> httpx -> trafilatura -> (Playwright
+fallback if the HTML looks incomplete) -> normalised article.
 
-Ver VeriGraph.md sección 9. Ninguna etapa aquí usa un LLM.
+See VeriGraph.md section 9. No stage here uses an LLM.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
 
 def is_safe_url(url: str) -> bool:
-    """Validación de seguridad básica contra SSRF antes de scrapear."""
+    """Basic SSRF safety validation before scraping."""
     try:
         parsed = urlparse(url)
     except ValueError:
@@ -38,7 +38,7 @@ def is_safe_url(url: str) -> bool:
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
             return False
     except ValueError:
-        pass  # es un hostname, no una IP literal; se deja pasar
+        pass  # it is a hostname, not a literal IP; let it through
     return True
 
 
@@ -49,7 +49,7 @@ def content_hash(text: str) -> str:
 
 async def scrape_article(url: str) -> ExtractedArticle | None:
     if not is_safe_url(url):
-        logger.warning("URL rechazada por validación de seguridad: %s", url)
+        logger.warning("URL rejected by the safety validation: %s", url)
         return None
 
     result = await fetch(url)
@@ -60,10 +60,11 @@ async def scrape_article(url: str) -> ExtractedArticle | None:
         if rendered:
             html = rendered
         elif result.status_code >= 400:
-            # Sin fallback exitoso y la respuesta original fue un error HTTP
-            # (bot-block, paywall, WAF, etc.) — no hay contenido real que
-            # extraer, así que descartamos en vez de parsear la página de error.
-            logger.warning("Descartando %s: status %s sin fallback exitoso", url, result.status_code)
+            # No successful fallback and the original response was an HTTP
+            # error (bot-block, paywall, WAF, etc.) — there is no real
+            # content to extract, so we discard instead of parsing the
+            # error page.
+            logger.warning("Discarding %s: status %s and no successful fallback", url, result.status_code)
             return None
 
     if not html:

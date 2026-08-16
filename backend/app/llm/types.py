@@ -23,12 +23,13 @@ class NarrativeChange:
 
 @dataclass
 class EvidenceItem:
-    """Una entrada de evidencia que se le pasa al LLM para el resumen final.
-    El modelo NUNCA recibe resultados arbitrarios de Internet: solo lo que
-    el motor sin LLM ya procesó y verificó (VeriGraph.md sección 32)."""
+    """One evidence entry handed to the LLM for the final summary. The
+    model NEVER receives arbitrary results from the internet: only what the
+    LLM-free engine already processed and verified (VeriGraph.md section
+    32)."""
 
     source: str
     published_at: str | None
     headline: str
-    role: str = ""  # p.ej. "origen", "confirma", "corrige", "contradice"
+    role: str = ""  # e.g. "origin", "confirms", "corrects", "contradicts"
     claims: list[str] = field(default_factory=list)

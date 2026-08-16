@@ -1,58 +1,59 @@
 # Unravel — Backend
 
-FastAPI + worker (Redis/RQ) que implementa el pipeline de rastreo (scraping,
-discovery, similitud sin LLM) y el motor de análisis semántico (LLM vía
-OpenRouter).
+FastAPI + worker (Redis/RQ) implementing the tracing pipeline (scraping,
+discovery, LLM-free similarity) and the semantic analysis engine (LLM
+through OpenRouter).
 
-## Correr con Docker (recomendado)
+## Running with Docker (recommended)
 
-Desde la raíz del repo:
+From the repository root:
 
 ```bash
-cp .env.example .env   # y pega tu OPENROUTER_API_KEY
+cp .env.example .env   # and paste your OPENROUTER_API_KEY
 docker compose up --build
 ```
 
-## Correr en local sin Docker
+## Running locally without Docker
 
-1. Levanta solo Postgres y Redis con Docker:
+1. Start only Postgres and Redis with Docker:
 
    ```bash
    docker compose up db redis
    ```
 
-2. Crea un entorno virtual e instala dependencias:
+2. Create a virtual environment and install the dependencies:
 
    ```bash
    cd backend
    python3 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
-   python -m spacy download es_core_news_sm   # opcional, mejora extracción de entidades
-   playwright install chromium                # opcional, fallback para páginas con JS
+   python -m spacy download en_core_web_sm   # optional, improves entity extraction
+   playwright install chromium               # optional, fallback for JS-heavy pages
    ```
 
-3. Copia `.env.example` a `backend/.env` (o exporta las variables) apuntando
-   a `localhost` en vez de los nombres de servicio de Docker:
+3. Copy `.env.example` to `backend/.env` (or export the variables) pointing
+   at `localhost` instead of the Docker service names:
 
    ```bash
    DATABASE_URL=postgresql+psycopg://unravel:unravel@localhost:5432/unravel
    REDIS_URL=redis://localhost:6379/0
    ```
 
-4. Aplica las migraciones:
+4. Apply the migrations:
 
    ```bash
    alembic upgrade head
    ```
 
-5. Levanta la API:
+5. Start the API:
 
    ```bash
    uvicorn app.main:app --reload
    ```
 
-6. En otra terminal, levanta el worker (procesa los análisis en segundo plano):
+6. In another terminal, start the worker (it processes analyses in the
+   background):
 
    ```bash
    python -m app.worker
@@ -60,25 +61,25 @@ docker compose up --build
 
 ## Endpoints
 
-- `POST /analyses` — `{"query_input": "https://..."}` → encola un análisis,
-  responde `202` con `{"analysis_id", "status": "queued"}`.
-- `GET /analyses/{id}` — estado del análisis; cuando `status == "done"`
-  incluye `graph` con `nodes`/`edges`/`summary_cards` listos para el
+- `POST /analyses` — `{"query_input": "https://..."}` → enqueues an
+  analysis, answers `202` with `{"analysis_id", "status": "queued"}`.
+- `GET /analyses/{id}` — analysis status; when `status == "done"` it also
+  includes `graph` with `nodes`/`edges`/`summary_cards` ready for the
   frontend.
-- `GET /health` — chequeo de salud; incluye si hay `OPENROUTER_API_KEY`
-  configurada.
+- `GET /health` — health check; reports whether an `OPENROUTER_API_KEY` is
+  configured.
 
-## Estructura
+## Structure
 
 ```
 app/
-  scraping/     httpx + trafilatura + BeautifulSoup + fallback Playwright
-  discovery/    GDELT, RSS, búsqueda (DuckDuckGo HTML, sin key), dedup
-  similarity/   TF-IDF, BM25, n-gramas, entidades (spaCy con fallback), tiempo
-  llm/          LLMProvider (abstracto) + OpenRouterProvider (único impl.)
-  pipeline/     orquestador del flujo completo + heurística de relaciones
-  graph/        arma el JSON de grafo/timeline que consume el frontend
-  api/routes/   endpoints FastAPI
+  scraping/     httpx + trafilatura + BeautifulSoup + Playwright fallback
+  discovery/    GDELT, RSS, search (DuckDuckGo HTML, no key), dedup
+  similarity/   TF-IDF, BM25, n-grams, entities (spaCy with fallback), time
+  llm/          LLMProvider (abstract) + OpenRouterProvider (only impl.)
+  pipeline/     full-flow orchestrator + relation heuristic
+  graph/        builds the graph/timeline JSON consumed by the frontend
+  api/routes/   FastAPI endpoints
   models/       SQLAlchemy
   schemas/      Pydantic
 ```
@@ -89,6 +90,6 @@ app/
 pytest
 ```
 
-Los tests cubren únicamente el motor sin LLM (determinista, sin red):
-generación de queries, scoring de similitud y la heurística de
-clasificación de relaciones.
+The tests cover only the LLM-free engine (deterministic, no network):
+query generation, similarity scoring and the relation classification
+heuristic.

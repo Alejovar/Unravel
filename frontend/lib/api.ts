@@ -12,7 +12,7 @@ export async function createAnalysis(queryInput: string): Promise<AnalysisCreate
   });
   if (!res.ok) {
     const detail = await res.json().catch(() => null);
-    throw new ApiError(detail?.detail || `No se pudo iniciar el análisis (${res.status})`);
+    throw new ApiError(detail?.detail || `Could not start the analysis (${res.status})`);
   }
   return res.json();
 }
@@ -23,7 +23,7 @@ export async function getAnalysis(analysisId: string): Promise<AnalysisResultRes
   });
   if (!res.ok) {
     const detail = await res.json().catch(() => null);
-    throw new ApiError(detail?.detail || `No se pudo obtener el análisis (${res.status})`);
+    throw new ApiError(detail?.detail || `Could not fetch the analysis (${res.status})`);
   }
   return res.json();
 }
